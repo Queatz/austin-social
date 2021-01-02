@@ -1,0 +1,97 @@
+
+
+Today
+=====
+
+ [ ] Model Gazebo + benches
+ [ ] Place all trees
+ [ ] Add Snake Island
+ [ ] Place trees
+
+ [ ] Model Grass 
+ [ ] Place Grass with weight paint
+
+ [ ] Press Enter to talk
+ [ ] Talk bubble
+ [ ] Player name over head
+
+ [ ] Compose Basic music theme
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Austin Social
+
+Client Development
+===========
+
+Scene
+
+	Ground
+	Players
+	Apparel
+	Environment Objects
+	Teleport
+	Game Controls
+		WASD / Arrows
+		Drag to look
+	Enter to talk
+	Message bubbles
+
+Scene Editor
+
+	Add Ground
+	Add / Remove environment object
+	Add / Remove Teleport
+	Name
+
+World Map
+
+	Map of Austin
+	Playable Areas
+		Num. players in the area
+		Click on them to enter
+
+Websockets
+
+	Scene info
+	Player movements
+	Talk
+
+Content
+
+	Load content from server
+
+
+Server Development
+===========
+
+

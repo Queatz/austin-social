@@ -1,0 +1,8 @@
+https://usgs.entwine.io/data/view.html?r=%22https://s3-us-west-2.amazonaws.com/usgs-lidar-public/USGS_LPC_TX_Central_B1_2017_LAS_2019%22
+
+https://www.sciencebase.gov/catalog/items?q=USGS+Lidar+Point+Cloud+TX+Central&filter=extentQuery%3D473110&filter=spatialQuery%3DPOINT%28-97.7202409+30.2467934%29&folderId=4f70ab64e4b058caae3f8def&offset=260&max=20
+
+https://data.tnris.org/collection/f84442b8-ac2a-4708-b5c0-9d15515f4483
+
+starmaps
+https://svs.gsfc.nasa.gov/cgi-bin/details.cgi?aid=3895

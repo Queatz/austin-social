@@ -1,0 +1,37 @@
+
+
+Photography
+===========
+
+1st Playable Area
+	Ground
+	Tree
+	Leaves
+	Grasses
+	Rocks
+
+3D
+==
+
+1st Playable Area
+	Peninsula
+	Bird Island
+		Picnic Table
+		Rope Swing
+	Gazebo
+	Sitting Station
+	End Tree
+	Angled Tree
+	Bench
+	Bridge
+
+
+
+2D
+==
+
+Player (3D -> 2D)
+	Standing (2 Frames) - Up, Down, Left, Right
+	Walking (3 Frames) - Up, Down, Left, Right
+	Sitting (1 Frame) - Up, Down, Left, Right
+	Talk bubble
