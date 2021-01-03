@@ -3,19 +3,20 @@
 Today
 =====
 
- [ ] Model Gazebo + benches
- [ ] Place all trees
- [ ] Add Snake Island
- [ ] Place trees
+ [x] Model Gazebo
+ [x] Model benches
+ [x] Place all trees
+ [x] Add Snake Island
+ [x] Place trees
 
- [ ] Model Grass 
- [ ] Place Grass with weight paint
+ [x] Model Grass 
+ [x] Place Grass with weight paint
 
- [ ] Press Enter to talk
- [ ] Talk bubble
- [ ] Player name over head
+ [x] Press Enter to talk
+ [x] Talk bubble
+ [x] Player name over head
 
- [ ] Compose Basic music theme
+ [X] Compose Basic music theme
 
 
 

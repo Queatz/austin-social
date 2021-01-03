@@ -1,9 +1,10 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core'
-import { AbstractMesh, ActionManager, Animation, BounceEase, CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, CubicEase, DeepImmutableObject, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, EasingFunction, Engine, ExecuteCodeAction, FollowCamera, HemisphericLight, Light, Material, Mesh, MeshBuilder, NodeMaterial, PBRBaseSimpleMaterial, PBRMaterial, PBRMetallicRoughnessMaterial, PBRSpecularGlossinessMaterial, PowerEase, QuarticEase, Ray, ReflectionProbe, Scene, SceneLoader, Space, SSAORenderingPipeline, StandardMaterial, Texture, Vector2, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
+import { Component, ElementRef, HostBinding, HostListener, OnInit, ViewChild } from '@angular/core'
+import { AbstractMesh, ActionManager, Animation, CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DeepImmutableObject, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, DynamicTexture, EasingFunction, Engine, ExecuteCodeAction, FollowCamera, HemisphericLight, InstancedMesh, Light, Material, Mesh, MeshBuilder, NodeMaterial, PBRBaseSimpleMaterial, PBRMaterial, PowerEase, Ray, ReflectionProbe, Scalar, Scene, SceneLoader, ShadowGenerator, SolidParticleSystem, Sound, Space, StandardMaterial, Texture, TonemappingOperator, TonemapPostProcess, Vector2, Vector3, VertexBuffer, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
 import { SkyMaterial, WaterMaterial } from '@babylonjs/materials'
 
 import '@babylonjs/loaders/glTF'
 import '@babylonjs/core/Physics/Plugins/cannonJSPlugin'
+import { Subject } from 'rxjs'
 
 @Component({
   selector: 'app-root',
@@ -13,12 +14,29 @@ import '@babylonjs/core/Physics/Plugins/cannonJSPlugin'
 export class AppComponent implements OnInit {
   @ViewChild('renderCanvas', { static: true, read: ElementRef })
   renderCanvas!: ElementRef
+  
+  say = new Subject<string>()
+
+  @HostListener('window:keydown.enter')
+  talk(): void {
+    const result = prompt('hey')
+    
+    if (result) {
+      this.say.next(result)
+    }
+  }
 
   ngOnInit(): void {
     const showColliders = false
 
     const engine = new Engine(this.renderCanvas.nativeElement, true)
     const scene = new Scene(engine)
+
+    var music = new Sound("Music", "assets/Anya_of_Earth.ogg", scene, null, {
+      loop: true,
+      autoplay: true,
+      volume: .5
+    });
 
     scene.gravity = new Vector3(0, -9.81 / 60, 0)
     scene.fogMode = Scene.FOGMODE_EXP
@@ -40,14 +58,15 @@ export class AppComponent implements OnInit {
 
     const camera = new FollowCamera("camera", new Vector3(0, 10, 0), scene)
     camera.attachControl(true)
-    camera.radius = 10
+    camera.radius = 10 / 2
     camera.heightOffset = 0
-    camera.lowerHeightOffsetLimit = -1
-    camera.upperHeightOffsetLimit = 20
-    camera.lowerRadiusLimit = 5
-    camera.upperRadiusLimit = 20
+    camera.lowerHeightOffsetLimit = -1 / 2
+    camera.upperHeightOffsetLimit = 20 / 2
+    camera.lowerRadiusLimit = 5 / 2
+    camera.upperRadiusLimit = 20 / 2
     camera.cameraAcceleration = 0.025
     camera.rotationOffset = 180
+
     camera.fov = .6
     camera.maxZ = 10000
 
@@ -68,17 +87,13 @@ export class AppComponent implements OnInit {
     pipeline.depthOfField.lensSize = 85
     pipeline.depthOfField.fStop = 11
 
-
-    const postProcess = new ColorCorrectionPostProcess("color_correction", 'assets/Fuji XTrans III - Classic Chrome.png', 1.0, camera)
+    const lutPostProcess = new ColorCorrectionPostProcess("color_correction", 'assets/Fuji XTrans III - Classic Chrome.png', 1.0, camera)
 
     // pipeline.imageProcessing.colorCurvesEnabled = true
+    // const colorCurves = pipeline.imageProcessing.colorCurves!
+    // colorCurves.globalSaturation = 50
+    // colorCurves.globalExposure = 50
 
-    // const colorCurves = new ColorCurves()
-    // colorCurves.midtonesExposure = 25
-    // colorCurves.midtonesSaturation = 50
-    // colorCurves.highlightsExposure = 25
-    // colorCurves.highlightsSaturation = 25
-    // pipeline.imageProcessing.colorCurves = colorCurves
 
     // const ssao = new SSAORenderingPipeline('ssaopipeline', scene, 1, [ camera ]);
     // ssao.fallOff = 0.0000005
@@ -116,7 +131,7 @@ export class AppComponent implements OnInit {
     skyMaterial.mieDirectionalG = 0.1
     skyMaterial.mieCoefficient = 0.02
     skyMaterial.useSunPosition = false
-    skyMaterial.inclination = -0.6
+    skyMaterial.inclination = -0.45
     skyMaterial.azimuth = 0.25
 
     // Stars
@@ -130,12 +145,12 @@ export class AppComponent implements OnInit {
 
 
     // Skybox
-    const skybox = Mesh.CreateSphere('skyBox', 12, 500, scene, false, Mesh.BACKSIDE)
+    const skybox = Mesh.CreateSphere('skyBox', 12, 9100, scene, false, Mesh.BACKSIDE)
     skybox.applyFog = false
     skybox.material = skyMaterial
 
     // Starbox
-    let starbox = Mesh.CreateSphere('starBox', 12, 490, scene, false, Mesh.BACKSIDE)
+    let starbox = Mesh.CreateSphere('starBox', 12, 9000, scene, false, Mesh.BACKSIDE)
     starbox.applyFog = false
     starbox.rotate(new Vector3(0, 0, 1), -0.3926991)
     starbox.material = starMaterial
@@ -165,13 +180,13 @@ export class AppComponent implements OnInit {
     groundMaterial.specularColor = Color3.Black()
     groundMaterial.diffuseTexture = groundTexture
 
-    const groundMesh = Mesh.CreateGround('ground', 512, 512, 32, scene, false)
+    const groundMesh = Mesh.CreateGround('ground', 1024, 1024, 32, scene, false)
     groundMesh.position.y = -4
     groundMesh.material = groundMaterial
     groundMesh.receiveShadows = true
 
     //Water
-    water = Mesh.CreateGround('waterMesh', 512, 512, 64, scene, false)
+    water = Mesh.CreateGround('waterMesh', 1024, 1024, 64, scene, false)
 
     waterMaterial = new WaterMaterial('water', scene, new Vector2(512, 512))
     waterMaterial.backFaceCulling = true
@@ -194,75 +209,124 @@ export class AppComponent implements OnInit {
     waterMaterial.specularColor = Color3.White()
     waterMaterial.specularPower = 256
     waterMaterial.bumpAffectsReflection = true
+    waterMaterial.backFaceCulling = false
     water.material = waterMaterial
-    water.position.addInPlace(new Vector3(0, -3, 0))
     water.alphaIndex = 0
 
-    SceneLoader.ImportMesh('', '/assets/', 'ground.glb', scene, result => {
-      ground = result[1]
+    let rootTree!: Mesh
 
-      const groundMaterial = new PBRMetallicRoughnessMaterial("pbr", scene)
-      groundMaterial.metallic = 2
-      groundMaterial.roughness = 1.4
-      const texture = new Texture("assets/grass_03.png", scene)
-      texture.uScale = texture.vScale = 50
-      groundMaterial.baseTexture = texture
+    SceneLoader.ImportMesh('', '/assets/', 'peninsula world.glb', scene, result => {
+      ground = scene.getMeshByName('Peninsula')!
+
+      const groundMaterial = new PBRMaterial("pbr", scene)
+      groundMaterial.metallic = 0
+      groundMaterial.roughness = 1
+      const texture = new Texture("assets/peninsula sand.png", scene)
+      texture.uScale = texture.vScale = 120
+      groundMaterial.albedoTexture = texture
+      groundMaterial.specularIntensity = 0.1
 
       const grassBump = new Texture('assets/grass_path_2_nor_1k.png', scene)
       grassBump.uScale = grassBump.vScale = 50
       grassBump.level = .5
-      groundMaterial.normalTexture = grassBump
+      groundMaterial.bumpTexture = grassBump
 
       ground.material = groundMaterial
-      ground.position.addInPlace(new Vector3(0, -3, 0))
       ground.receiveShadows = true
       ground.checkCollisions = true
+      ground.useVertexColors = false
+      ground.hasVertexAlpha = false // because we use vertex colors
+
+      this.addGrasses(ground as Mesh, shadowGenerator)
+      
+      const treeMaterial = scene.getMaterialByName('Tree01')!
+      treeMaterial.backFaceCulling = false
+      treeMaterial.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
+      ;(treeMaterial as StandardMaterial).diffuseTexture = (treeMaterial! as StandardMaterial).emissiveTexture;
+      ;(treeMaterial as StandardMaterial).diffuseColor = Color3.White().scale(4);
+      ;(treeMaterial as StandardMaterial).emissiveTexture = null;
+      ;(treeMaterial as StandardMaterial).emissiveColor = Color3.Black();
+      ;(treeMaterial as StandardMaterial).specularColor = Color3.Black();
+      ;(treeMaterial as StandardMaterial).useAlphaFromDiffuseTexture = true;
+
+      result.forEach(mesh => {
+        // Gazeb0
+        if (mesh.name === 'Plane.005') {
+          mesh.receiveShadows = true
+          shadowGenerator.addShadowCaster(mesh)
+        }
+
+        if (mesh.name.indexOf('Bench') !== -1) {
+          mesh.checkCollisions = true
+        }
+
+        if (mesh.name.indexOf('Tree') !== -1) {
+          shadowGenerator.addShadowCaster(mesh)
+          if ((mesh instanceof InstancedMesh)) {
+            // Convert instance to clone
+            const instance = (mesh as InstancedMesh)//.sourceMesh;
+            const clone = instance.sourceMesh.clone("clonedTree")
+            clone.receiveShadows = true;
+            clone.position = instance.position
+            clone.rotation = instance.rotation
+            clone.rotationQuaternion = instance.rotationQuaternion
+            clone.scaling = instance.scaling
+            instance.dispose()
+          } else {
+            ;(mesh as Mesh).receiveShadows = true;
+            rootTree = mesh as Mesh
+          }
+
+          // console.log(mesh.material!.needAlphaBlending())
+          // mesh.material!.needAlphaBlendingForMesh(mesh)
+        }
+      })
 
       // BUG
       //waterMaterial.addToRenderList(ground)
     })
 
-    SceneLoader.ImportMesh('', '/assets/', 'tree.glb', scene, result => {
-      const tree = result[1]
-      tree.position.addInPlace(new Vector3(6, 3.5, 1))
+    // SceneLoader.ImportMesh('', '/assets/', 'tree.glb', scene, result => {
+    //   const tree = result[1]
+    //   tree.position.addInPlace(new Vector3(6, 3.5, 1))
 
-      const collider = MeshBuilder.CreateBox('collider', {
-        height: 4,
-        width: 1,
-        depth: 1
-      }, scene)
-      collider.isVisible = showColliders
-      collider.position = new Vector3(-6, -2, 1)
-      collider.checkCollisions = true
-      tree.receiveShadows = true
-      tree.material!.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
-      (tree.material! as StandardMaterial).diffuseTexture = (tree.material! as StandardMaterial).emissiveTexture;
-      (tree.material! as StandardMaterial).emissiveTexture = null;
-      (tree.material! as StandardMaterial).emissiveColor = Color3.Black();
-      (tree.material! as StandardMaterial).useAlphaFromDiffuseTexture = true;
-      shadowGenerator.addShadowCaster(tree)
-    })
+    //   const collider = MeshBuilder.CreateBox('collider', {
+    //     height: 4,
+    //     width: 1,
+    //     depth: 1
+    //   }, scene)
+    //   collider.isVisible = showColliders
+    //   collider.position = new Vector3(-6, -2, 1)
+    //   collider.checkCollisions = true
+    //   tree.receiveShadows = true
+    //   tree.material!.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
+    //   (tree.material! as StandardMaterial).diffuseTexture = (tree.material! as StandardMaterial).emissiveTexture;
+    //   (tree.material! as StandardMaterial).emissiveTexture = null;
+    //   (tree.material! as StandardMaterial).emissiveColor = Color3.Black();
+    //   (tree.material! as StandardMaterial).useAlphaFromDiffuseTexture = true;
+    //   shadowGenerator.addShadowCaster(tree)
+    // })
 
-    SceneLoader.ImportMesh('', '/assets/', 'tree.glb', scene, result => {
-      const tree = result[1]
-      tree.position.addInPlace(new Vector3(5, 3.5, 6))
+    // SceneLoader.ImportMesh('', '/assets/', 'tree.glb', scene, result => {
+    //   const tree = result[1]
+    //   tree.position.addInPlace(new Vector3(5, 3.5, 6))
 
-      const collider = MeshBuilder.CreateBox('collider', {
-        height: 4,
-        width: 1,
-        depth: 1
-      }, scene)
-      collider.isVisible = showColliders
-      collider.position = new Vector3(-5, -2, 6)
-      collider.checkCollisions = true
-      tree.receiveShadows = true
-      tree.material!.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
-      (tree.material! as StandardMaterial).diffuseTexture = (tree.material! as StandardMaterial).emissiveTexture;
-      (tree.material! as StandardMaterial).emissiveTexture = null;
-      (tree.material! as StandardMaterial).emissiveColor = Color3.Black();
-      (tree.material! as StandardMaterial).useAlphaFromDiffuseTexture = true;
-      shadowGenerator.addShadowCaster(tree)
-    })
+    //   const collider = MeshBuilder.CreateBox('collider', {
+    //     height: 4,
+    //     width: 1,
+    //     depth: 1
+    //   }, scene)
+    //   collider.isVisible = showColliders
+    //   collider.position = new Vector3(-5, -2, 6)
+    //   collider.checkCollisions = true
+    //   tree.receiveShadows = true
+    //   tree.material!.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
+    //   (tree.material! as StandardMaterial).diffuseTexture = (tree.material! as StandardMaterial).emissiveTexture;
+    //   (tree.material! as StandardMaterial).emissiveTexture = null;
+    //   (tree.material! as StandardMaterial).emissiveColor = Color3.Black();
+    //   (tree.material! as StandardMaterial).useAlphaFromDiffuseTexture = true;
+    //   shadowGenerator.addShadowCaster(tree)
+    // })
 
     SceneLoader.ImportMesh('', '/assets/', 'human.glb', scene, result => {
       const human = scene.getMeshByName('Human_Cube')!
@@ -304,6 +368,8 @@ export class AppComponent implements OnInit {
       const heroSpeedBackwards = .1
       const heroRotationSpeed = Math.PI / 180 * 5
 
+      const walkingSound = new Sound("sound", "assets/walk.ogg", scene);
+
       let animating = true
 
       const weights = {
@@ -317,12 +383,12 @@ export class AppComponent implements OnInit {
       const sittingAnim = scene.getAnimationGroupByName("Sitting")!
 
       const hero = MeshBuilder.CreateBox('hero', {
-        width: 1,
-        depth: 1,
-        height: 4
+        width: .5,
+        depth: .5,
+        height: .5
       }, scene)
 
-      hero.position.addInPlace(new Vector3(0, 2, 0))
+      hero.ellipsoid = new Vector3(.5, .5, .5)
 
       hero.isVisible = showColliders
 
@@ -333,10 +399,9 @@ export class AppComponent implements OnInit {
         depth: .5,
         height: .5
       }, scene)
-      cameraTarget.position.copyFrom(new Vector3(0, 1, 0))
+      cameraTarget.position.copyFrom(new Vector3(0, 0, 0))
 
       cameraTarget.isVisible = showColliders
-      cameraTarget.parent = hero
       camera.lockedTarget = cameraTarget
       camera.cameraDirection = new Vector3(0, 0, -1)
       camera.rotationOffset = 180
@@ -362,9 +427,17 @@ export class AppComponent implements OnInit {
       humanRoot.parent = hero
       humanRoot.position.addInPlace(new Vector3(0, -2, 0))
 
+      humanRoot.scaling.scaleInPlace(.480304)
+
       hero.ellipsoid = new Vector3(1, 4, 1)
       hero.ellipsoidOffset = new Vector3(0, 2, 0)
       hero.checkCollisions = true
+
+      this.genPlayerName('Anya of Earth', hero, scene, false)
+
+      this.say.subscribe(say => {
+        this.genPlayerName(say, hero, scene, true)
+      })
 
       human.receiveShadows = true
       shadowGenerator.addShadowCaster(human)
@@ -395,11 +468,13 @@ export class AppComponent implements OnInit {
         const skel = human.skeleton!
         const head = skel.bones[skel.getBoneIndexByName('mixamorig_HeadTop_End')]
         hairz[1].attachToBone(head, humanRoot)
-        hairz[3].attachToBone(head, humanRoot)
-        hairz[1].position = new Vector3(0.062789, -0.234956, 0.05)
-        hairz[1].rotation = new Vector3(Math.PI / 2, 0, 0)
-        hairz[3].position = new Vector3(-0.062789, -0.234956, 0.05)
-        hairz[3].rotation = new Vector3(Math.PI / 2, 0, 0)
+        hairz[2].attachToBone(head, humanRoot)
+        hairz[1].position = new Vector3(0.068, -0.234956, 0.05)
+        hairz[1].rotation = new Vector3(-Math.PI / 2 - 0.24, 0.2, 0)
+        hairz[2].position = new Vector3(-0.068, -0.234956, 0.05)
+        hairz[2].rotation = new Vector3(-Math.PI / 2 - 0.24, -0.2, 0)
+
+        cameraTarget.parent = hairz[2]
       })
 
       // SceneLoader.LoadAssetContainer('/assets/', 'shirt.glb', scene, assets => {
@@ -431,6 +506,10 @@ export class AppComponent implements OnInit {
             hero.moveWithCollisions(hero.forward.scaleInPlace(heroSpeed))
             keydown = true
         }
+        if (inputMap["e"]) {  
+          hero.moveWithCollisions(hero.forward.scaleInPlace(heroSpeed * 10))
+          keydown = true
+        }
         if (inputMap["s"]) {
             hero.moveWithCollisions(hero.forward.scaleInPlace(-heroSpeedBackwards))
             keydown = true
@@ -456,10 +535,12 @@ export class AppComponent implements OnInit {
         fovEase.setEasingMode(EasingFunction.EASINGMODE_EASEOUT)
 
         if (keydown) {
+          if (!walkingSound.isPlaying) {
+            walkingSound.loop = true
+            walkingSound.play()
+          }
             if (sitting) {
               sitting = false
-              cameraTarget.position.copyFrom(new Vector3(0, 1, 0))
-              Animation.CreateAndStartAnimation("position.y", cameraTarget, "position.y", 60, 30, cameraTarget.position.y, 1, 0, fovEase)
               Animation.CreateAndStartAnimation("fov anim", camera, "fov", 60, 30, camera.fov, .6, 0, fovEase)
               shadowGenerator.splitFrustum()
             }
@@ -470,12 +551,14 @@ export class AppComponent implements OnInit {
             }
         }
         else {
+          if (walkingSound.isPlaying) {
+            walkingSound.stop()
+          }
           if (didSit) {
             if (sitting && weights.sitting === 1) {
               sitting = false
               animating = true
 
-              Animation.CreateAndStartAnimation("position.y", cameraTarget, "position.y", 60, 30, cameraTarget.position.y, 1, 0, fovEase)
               Animation.CreateAndStartAnimation("fov anim", camera, "fov", 60, 30, camera.fov, .6, 0, fovEase)
               shadowGenerator.splitFrustum()
             } else if (!sitting && weights.sitting === 0) {
@@ -483,7 +566,6 @@ export class AppComponent implements OnInit {
               sitting = true
               animating = false
 
-              Animation.CreateAndStartAnimation("position.y", cameraTarget, "position.y", 60, 30, cameraTarget.position.y, 0, 0, fovEase)
               Animation.CreateAndStartAnimation("fov anim", camera, "fov", 60, 30, camera.fov, .4, 0, fovEase)
               shadowGenerator.splitFrustum()
             }
@@ -502,8 +584,23 @@ export class AppComponent implements OnInit {
           if (!hit.hit) {
             hero.moveWithCollisions(new Vector3(0, -9.81 * scene.deltaTime / 1000, 0))
           } else {
-          hero.position.y = hit.pickedPoint!.y + 2
+            hero.position.y = hit.pickedPoint!.y + 2
           }
+        }
+
+        if (water) {
+          const ray = new Ray(camera.position, new Vector3(0, 1, 0))
+          const hit = ray.intersectsMesh(water as DeepImmutableObject<AbstractMesh>, false)
+          
+          if (hit.hit && !pipeline.imageProcessing.colorCurvesEnabled) {
+            const colorCurves = pipeline.imageProcessing.colorCurves!
+            colorCurves.globalHue = 210
+            colorCurves.globalDensity = 100
+            colorCurves.globalExposure = -100
+            pipeline.imageProcessing.colorCurvesEnabled = true
+          } else if (!hit.hit && pipeline.imageProcessing.colorCurvesEnabled) {
+            pipeline.imageProcessing.colorCurvesEnabled = false
+        }
         }
 
         const speed = 4
@@ -548,8 +645,9 @@ export class AppComponent implements OnInit {
 
         light.intensity = 2 * howMuchDay
         light.specular = Color3.White().scale(Math.max(0, Math.min(1, -3.4 + howMuchDay * 8)))
-        ambientLight.intensity = Math.max(0.05, howMuchDay)
         ambientLight.diffuse = Color3.White().scale(howMuchDay).add(Color3.FromHexString('#16228F').scale(1 - howMuchDay))
+        ambientLight.specular = light.specular.scale(.99).add(new Color3(0.01, 0.01, 0.01)) // scale + add to fix bug where specular never shows up again after reaching 0
+        ambientLight.intensity = Math.max(0.2, howMuchDay)
 
         waterMaterial.waterColor = Color3.FromHexString('#2D7493').scale(Math.max(0, Math.min(1, howMuchDay * 2)))
 
@@ -564,6 +662,8 @@ export class AppComponent implements OnInit {
 
         pipeline.depthOfField.focusDistance = 1000 * hero.getDistanceToCamera()
         pipeline.depthOfField.fStop = 1.2 + (1 - weights.sitting) * (11 - 1.2)
+
+        rootTree?.updateFacetData()
       })
     })
 
@@ -573,6 +673,111 @@ export class AppComponent implements OnInit {
 
     window.addEventListener('resize', () => {
       engine.resize()
+    })
+  }
+  genPlayerName(text: string, hero: Mesh, scene: Scene, vanish: boolean) {
+    //Set font
+    var font_size = 48;
+    var font = "normal " + font_size + "px Arial";
+    
+    //Set height for plane
+    var planeHeight = .125;
+
+    //Set height for dynamic texture
+    var DTHeight = 1.5 * font_size; //or set as wished
+
+    //Calcultae ratio
+    var ratio = planeHeight/DTHeight;
+
+    //Use a temporay dynamic texture to calculate the length of the text on the dynamic texture canvas
+    var temp = new DynamicTexture("DynamicTexture", 64, scene, false)
+    var tmpctx = temp.getContext()
+    tmpctx.font = font
+    var DTWidth = tmpctx.measureText(text).width + 8
+
+    //Calculate width the plane has to be 
+    var planeWidth = DTWidth * ratio
+
+    //Create dynamic texture and write the text
+    var dynamicTexture = new DynamicTexture("DynamicTexture", {width:DTWidth, height:DTHeight}, scene, false)
+    var mat = new StandardMaterial("mat", scene)
+    mat.diffuseTexture = dynamicTexture
+    mat.diffuseTexture.hasAlpha = true
+    mat.emissiveTexture = dynamicTexture
+    dynamicTexture.drawText(text, null, null, font, vanish ? "#000000" : "#ffffff", vanish ? "#ffffff" : "#ffffff00")
+    mat.useAlphaFromDiffuseTexture = true
+    mat.disableLighting = true
+
+    //Create plane and set dynamic texture as material
+    var plane = MeshBuilder.CreatePlane("plane", {width:planeWidth, height:planeHeight}, scene)
+    plane.material = mat
+    plane.billboardMode = Mesh.BILLBOARDMODE_ALL
+
+    if (vanish) {
+      setTimeout(() => {
+        plane.dispose(false, true)
+      }, 5000);
+      plane.position.addInPlace(new Vector3(0, .25, 0))
+    } else {
+      plane.position.addInPlace(new Vector3(0, .5, 0))
+    }
+    plane.parent = hero
+  }
+
+  addGrasses(ground: Mesh, shadowGenerator: ShadowGenerator): void {
+    SceneLoader.LoadAssetContainer('assets/', 'grass.glb', ground.getScene(), meshes => {
+      const positions = ground.getVerticesData(VertexBuffer.PositionKind)!
+      const colors = ground.getVerticesData(VertexBuffer.ColorKind)!
+      const count = ground.getTotalVertices()
+      const indices = ground.getIndices()!
+
+      const grassMesh = meshes.meshes.find(x => x.name === 'GrassPatch01') as Mesh
+
+      const tex = new Texture('assets/grass.png', ground.getScene())
+      // tex.uScale = -1
+      tex.vScale = -1
+
+      const grassMat = new PBRMaterial("grass", ground.getScene())
+      grassMat.albedoColor = Color3.White()
+      grassMat.albedoTexture = tex
+      grassMat.roughness = 1
+      grassMat.metallic = 0
+      grassMat.specularIntensity = 0
+      grassMat.albedoTexture.hasAlpha = true
+      grassMat.useAlphaFromAlbedoTexture = true
+      grassMat.transparencyMode = Material.MATERIAL_ALPHATEST
+      grassMat.backFaceCulling = false
+      grassMesh.material = grassMat
+
+      const SPS = new SolidParticleSystem("SPS", ground.getScene(), {
+        useModelMaterial: true
+      })
+      SPS.addShape(grassMesh, count)
+      meshes.dispose() 
+      const mesh = SPS.buildMesh()
+
+      mesh.position = ground.position
+      mesh.rotation = ground.rotation
+      mesh.rotationQuaternion = ground.rotationQuaternion
+      mesh.parent = ground.parent
+
+      SPS.initParticles = () => {
+          for (let p = 0; p < count; p++) {
+              const particle = SPS.particles[p]  
+              particle.position = Vector3.FromArray(positions, p * 3)//.addInPlace(ground.position)
+          
+              const scale = colors[p * 4] > .25 ? 1/25 : 0
+              particle.scale.x = scale
+              particle.scale.y = scale * 5
+              particle.scale.z = scale
+          }
+      }
+
+      SPS.isAlwaysVisible = true
+      SPS.initParticles()
+      SPS.setParticles()
+
+      shadowGenerator.addShadowCaster(SPS.mesh)
     })
   }
 }
