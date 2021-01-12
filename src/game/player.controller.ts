@@ -2,6 +2,7 @@ import { AbstractMesh, Animation, Bone, CascadedShadowGenerator, Color3, DeepImm
 import { InputController } from './input.controller'
 import { GameScreen } from './screens/game.screen'
 import { WaterController } from './water.controller'
+import { WorldController } from './world.controller'
 
 export class PlayerController {
 
@@ -24,8 +25,10 @@ export class PlayerController {
 
   cameraTargetMesh?: Mesh
   cameraTarget?: Mesh
+
+  humanScale = .480304
   
-  constructor(private screen: GameScreen, private shadowGenerator: CascadedShadowGenerator, private water: WaterController, private input: InputController) {
+  constructor(private screen: GameScreen, private shadowGenerator: CascadedShadowGenerator, private water: WaterController, private world: WorldController, private input: InputController) {
     this.walkingSound = new Sound('sound', 'assets/walk.ogg', screen.scene)
     
     this.hero = MeshBuilder.CreateBox('hero', {
@@ -59,8 +62,6 @@ export class PlayerController {
         depth: .0125,
         height: .0125
       }, screen.scene)
-      this.cameraTarget.position.copyFrom(new Vector3(0, 0, 0))
-      this.cameraTarget.parent = this.hero
 
       this.cameraTarget.isVisible = false
       screen.camera.lockedTarget = this.cameraTarget
@@ -74,7 +75,7 @@ export class PlayerController {
       humanRoot.parent = this.hero
       humanRoot.position.addInPlace(new Vector3(0, -2, 0))
 
-      humanRoot.scaling.scaleInPlace(.480304)
+      humanRoot.scaling.scaleInPlace(this.humanScale)
 
       this.hero.ellipsoid = new Vector3(1, 4, 1)
       this.hero.ellipsoidOffset = new Vector3(0, 2, 0)
@@ -223,9 +224,9 @@ export class PlayerController {
       }
     }
 
-    if (this.water.groundMesh) {
+    if (this.world.ground) {
       const ray = new Ray(this.hero.position.add(new Vector3(0, -2.1, 0)), new Vector3(0, 1, 0))
-      const hit = ray.intersectsMesh(this.water.groundMesh as DeepImmutableObject<AbstractMesh>, false)
+      const hit = ray.intersectsMesh(this.world.ground as DeepImmutableObject<AbstractMesh>, false)
 
       if (!hit.hit) {
         this.hero.moveWithCollisions(new Vector3(0, -9.81 * this.screen.scene.deltaTime / 1000, 0))
@@ -288,8 +289,13 @@ export class PlayerController {
 
     if (this.cameraTargetMesh) {
       const offset = new Vector3(0, this.cameraTargetMesh.getBoundingInfo().boundingBox.extendSize.y, 0)
-      offset.rotateByQuaternionToRef(this.cameraTargetMesh.absoluteRotationQuaternion, offset) // not correct when rotation
-      this.cameraTarget!.position.copyFrom(this.cameraTargetMesh.absolutePosition.add(offset).subtract(this.hero.position))
+      offset.rotateByQuaternionToRef(this.cameraTargetMesh.absoluteRotationQuaternion, offset)
+      this.cameraTarget!.position.copyFrom(this.cameraTargetMesh.absolutePosition.add(offset))
+
+      if (this.hero.rotationQuaternion) {
+        this.cameraTarget!.rotationQuaternion = this.hero.rotationQuaternion.clone()
+      }
+
       this.screen.pipeline.depthOfField.focusDistance = this.cameraTarget!.getDistanceToCamera() * 1000
     }
   }

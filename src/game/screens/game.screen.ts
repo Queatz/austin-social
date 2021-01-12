@@ -15,10 +15,6 @@ export class GameScreen implements Screen {
   input: InputController
   camera: FollowCamera
   pipeline: DefaultRenderingPipeline
-
-  gameTime = 0
-  sunPosition = new Vector3(0, 0, 1)
-
   lutPostProcess: ColorCorrectionPostProcess
   godrays: VolumetricLightScatteringPostProcess
   light: DirectionalLight
@@ -29,6 +25,9 @@ export class GameScreen implements Screen {
   world: WorldController
   player: PlayerController
   overlay: OverlayController
+
+  gameTime = 0
+  sunPosition = new Vector3(0, 0, 1)
 
   constructor(public game: GameController) {
     this.scene = new Scene(game.engine)
@@ -137,7 +136,7 @@ export class GameScreen implements Screen {
 
     this.world = new WorldController(this.scene, this.shadowGenerator, 'peninsula world.glb')
 
-    this.player = new PlayerController(this, this.shadowGenerator, this.water, this.input)
+    this.player = new PlayerController(this, this.shadowGenerator, this.water, this.world, this.input)
     
     this.overlay = new OverlayController(this.overlayScene)
 
@@ -173,7 +172,7 @@ export class GameScreen implements Screen {
 
   update(): void {
     this.player.update()
-    
+
     this.overlaySceneCamera.position = this.camera.position.clone()
     this.overlaySceneCamera.rotation = this.camera.rotation.clone()
     this.overlaySceneCamera.fov = this.camera.fov

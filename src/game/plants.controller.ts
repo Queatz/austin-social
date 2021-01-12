@@ -1,5 +1,7 @@
 import { Mesh, ShadowGenerator, SceneLoader, VertexBuffer, Texture, PBRMaterial, Color3, SolidParticleSystem, Vector3, Material } from '@babylonjs/core'
 
+// See https://playground.babylonjs.com/#NFSGWT#2 for better scattering
+
 export class PlantsController {
   addGrasses(ground: Mesh, shadowGenerator: ShadowGenerator): void {
     SceneLoader.LoadAssetContainer('assets/', 'grass.glb', ground.getScene(), meshes => {
@@ -11,7 +13,6 @@ export class PlantsController {
       const grassMesh = meshes.meshes.find(x => x.name === 'GrassPatch01') as Mesh
 
       const tex = new Texture('assets/grass.png', ground.getScene())
-      // tex.uScale = -1
       tex.vScale = -1
 
       const grassMat = new PBRMaterial('grass', ground.getScene())

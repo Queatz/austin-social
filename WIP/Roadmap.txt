@@ -10,90 +10,23 @@ Austin Adventure
 Austin Love Story
 
 
-Controllers
-===========
-Initialization
-Music
-Scene
-Input
-State
-Camera
-Post Processing
-Light & Shadow
-World
-Skybox
-Ground
-Water
-Player
-Character Customization
-Game loop
-Day + Night
-Utility
-UI Layer
-Scene Helpers
-
-
-Interface Flow
+Screens
 ==============
 
-Main Scene
+Main Screen
 	- 3D background
 	- Music
 	- Sign in / Sign up
 
-Character Creator Scene
+Character Creator Screen
 	 - 3D Scene
 	 - Character
 	 - Music
 	 - Creation tools
 	 - Name
 
-Game Scene
+Game Screen
 	- Everything
-
-
-Code Structure
-==============
-
-GameController			Controls overall game state
-	EngineController	Controls the engine
-	SceneController		Controls which scene is active
-	AccountController	Controls account info
-	WorldController		Controls the world
-
-	
-
- [ ] Attach sound to people
-
-Today (Jan 3)
-=============
-
- [X] Clouds
- [X] Swim
-
-Today (Jan 2)
-=============
-
- [x] Model Gazebo
- [x] Model benches
- [x] Place all trees
- [x] Add Snake Island
- [x] Place trees
-
- [x] Model Grass 
- [x] Place Grass with weight paint
-
- [x] Press Enter to talk
- [x] Talk bubble
- [x] Player name over head
-
- [X] Compose Basic music theme
-
-
-
-
-
-
 
 
 
