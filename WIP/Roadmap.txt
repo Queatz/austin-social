@@ -1,7 +1,78 @@
 
+Potential Names
+===============
 
-Today
-=====
+AustinStory
+Austin Life Simulator
+Austin Simulator
+Austin Adventure
+
+Austin Love Story
+
+
+Controllers
+===========
+Initialization
+Music
+Scene
+Input
+State
+Camera
+Post Processing
+Light & Shadow
+World
+Skybox
+Ground
+Water
+Player
+Character Customization
+Game loop
+Day + Night
+Utility
+UI Layer
+Scene Helpers
+
+
+Interface Flow
+==============
+
+Main Scene
+	- 3D background
+	- Music
+	- Sign in / Sign up
+
+Character Creator Scene
+	 - 3D Scene
+	 - Character
+	 - Music
+	 - Creation tools
+	 - Name
+
+Game Scene
+	- Everything
+
+
+Code Structure
+==============
+
+GameController			Controls overall game state
+	EngineController	Controls the engine
+	SceneController		Controls which scene is active
+	AccountController	Controls account info
+	WorldController		Controls the world
+
+	
+
+ [ ] Attach sound to people
+
+Today (Jan 3)
+=============
+
+ [X] Clouds
+ [X] Swim
+
+Today (Jan 2)
+=============
 
  [x] Model Gazebo
  [x] Model benches
