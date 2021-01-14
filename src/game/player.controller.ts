@@ -1,4 +1,4 @@
-import { AbstractMesh, Animation, Bone, CascadedShadowGenerator, Color3, DeepImmutableObject, EasingFunction, Mesh, MeshBuilder, PBRMaterial, PowerEase, Ray, SceneLoader, ShadowGenerator, Sound, Vector3 } from '@babylonjs/core'
+import { AbstractMesh, Animation, Bone, CascadedShadowGenerator, Color3, DeepImmutableObject, EasingFunction, Mesh, MeshBuilder, PBRMaterial, PowerEase, Ray, SceneLoader, Sound, Vector3 } from '@babylonjs/core'
 import { InputController } from './input.controller'
 import { GameScreen } from './screens/game.screen'
 import { WaterController } from './water.controller'
@@ -9,9 +9,9 @@ export class PlayerController {
   sitting = false
   hero: Mesh
 
-  heroSpeed = .05
-  heroSpeedBackwards = .1
-  heroRotationSpeed = Math.PI / 180 * 5
+  heroSpeed = .002
+  heroSpeedBackwards = .002
+  heroRotationSpeed = Math.PI / 360 / 2
 
   walkingSound: Sound
 
@@ -44,12 +44,13 @@ export class PlayerController {
       const human = screen.scene.getMeshByName('Human_Cube') as Mesh
 
       const material = new PBRMaterial('pbr', screen.scene)
-      material.albedoColor = Color3.FromHexString('#F5BC88').toLinearSpace() // F5BC88 // 4F2F1C // FFC6C0
+      material.albedoColor = Color3.FromHexString('#F0AFAF').toLinearSpace() // F0AFAF // F5BC88 // 4F2F1C // FFC6C0
       material.metallic = 0
-      material.roughness = .6
-      material.sheen.isEnabled = true
-      material.sheen.roughness = .04
-      material.sheen.intensity = .04
+      material.roughness = .7
+      material.directIntensity = 1.6
+      material.clearCoat.isEnabled = true
+      material.clearCoat.intensity = .2
+      material.clearCoat.roughness = .4
 
       human.material = material
 
@@ -104,8 +105,8 @@ export class PlayerController {
 
         const hairMat = new PBRMaterial('hair', screen.scene)
         hairMat.albedoColor = Color3.FromHexString('#1A0C09').toLinearSpace().scale(3)
-        hairMat.roughness = .2
-        hairMat.metallic = 1
+        hairMat.roughness = .4
+        hairMat.metallic = .2
         hairMat.sheen.isEnabled = true
         hairMat.sheen.linkSheenWithAlbedo = true
         hairMat.anisotropy.isEnabled = true
@@ -142,23 +143,23 @@ export class PlayerController {
     let keydown = false, didSit = false
 
     if (this.input.pressed('w')) {  
-        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed))
+        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * this.screen.scene.deltaTime))
         keydown = true
     }
     if (this.input.pressed('e')) {  
-      this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * 4))
+      this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * 4 * this.screen.scene.deltaTime))
       keydown = true
     }
     if (this.input.pressed('s')) {
-        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(-this.heroSpeedBackwards))
+        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(-this.heroSpeedBackwards * this.screen.scene.deltaTime))
         keydown = true
     }
     if (this.input.pressed('a')) {
-        this.hero.rotate(Vector3.Up(), -this.heroRotationSpeed)
+        this.hero.rotate(Vector3.Up(), -this.heroRotationSpeed * this.screen.scene.deltaTime)
         keydown = true
     }
     if (this.input.pressed('d')) {
-        this.hero.rotate(Vector3.Up(), this.heroRotationSpeed)
+        this.hero.rotate(Vector3.Up(), this.heroRotationSpeed * this.screen.scene.deltaTime)
         keydown = true
     }
     if (this.input.pressed('b')) {
@@ -286,7 +287,9 @@ export class PlayerController {
     walkAnim?.setWeightForAllAnimatables(weights.walking)
     sittingAnim?.setWeightForAllAnimatables(weights.sitting)
     idleAnim?.setWeightForAllAnimatables(weights.idle)
+  }
 
+  updateCamera() {
     if (this.cameraTargetMesh) {
       const offset = new Vector3(0, this.cameraTargetMesh.getBoundingInfo().boundingBox.extendSize.y, 0)
       offset.rotateByQuaternionToRef(this.cameraTargetMesh.absoluteRotationQuaternion, offset)

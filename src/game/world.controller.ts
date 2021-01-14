@@ -1,18 +1,18 @@
-import { Color3, InstancedMesh, Material, Mesh, PBRMaterial, Scene, SceneLoader, ShadowGenerator, StandardMaterial, Texture } from '@babylonjs/core'
+import { InstancedMesh, Material, Mesh, PBRMaterial, Scene, SceneLoader, ShadowGenerator, StandardMaterial, Texture } from '@babylonjs/core'
 import { PlantsController } from './plants.controller'
 
 export class WorldController {
 
   ground?: Mesh
   plants = new PlantsController()
-  
+
   constructor(scene: Scene, shadowGenerator: ShadowGenerator, worldFileName: string) {
     SceneLoader.ImportMesh('', '/assets/', worldFileName, scene, result => {
       this.ground = scene.getMeshByName('Peninsula') as Mesh
 
       const groundMaterial = new PBRMaterial('pbr', scene)
       groundMaterial.metallic = 0
-      groundMaterial.roughness = 1
+      groundMaterial.roughness = .7
       const texture = new Texture('assets/peninsula sand.png', scene)
       texture.uScale = texture.vScale = 120
       groundMaterial.albedoTexture = texture
@@ -30,16 +30,18 @@ export class WorldController {
       this.ground.hasVertexAlpha = false // because we use vertex colors
 
       this.plants.addGrasses(this.ground, shadowGenerator)
-      
+
       const treeMaterial = scene.getMaterialByName('Tree01') as StandardMaterial
-      treeMaterial.backFaceCulling = false
-      treeMaterial.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND
-      treeMaterial.diffuseTexture = (treeMaterial! as StandardMaterial).emissiveTexture
-      treeMaterial.diffuseColor = Color3.White().scale(4)
-      treeMaterial.emissiveTexture = null
-      treeMaterial.emissiveColor = Color3.Black()
-      treeMaterial.specularColor = Color3.Black()
-      treeMaterial.useAlphaFromDiffuseTexture = true
+      const treeMat = new PBRMaterial('tree', scene)
+      treeMat.albedoTexture = (treeMaterial! as StandardMaterial).emissiveTexture!
+      treeMat.albedoTexture.hasAlpha = true
+      treeMat.directIntensity = 8
+      treeMat.roughness = 1
+      treeMat.metallic = 0
+      treeMat.specularIntensity = 0
+      treeMat.useAlphaFromAlbedoTexture = true
+      treeMat.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND
+      treeMat.backFaceCulling = false
 
       result.forEach(mesh => {
         // Gazebo
@@ -63,9 +65,11 @@ export class WorldController {
             clone.rotation = instance.rotation
             clone.rotationQuaternion = instance.rotationQuaternion
             clone.scaling = instance.scaling
+            clone.material = treeMat
             instance.dispose()
           } else {
-            (mesh as Mesh).receiveShadows = true
+            (mesh as Mesh).receiveShadows = true;
+            (mesh as Mesh).material = treeMat
           }
         }
       })

@@ -29,5 +29,9 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.game = new GameController(this.say, this.renderCanvas.nativeElement)
     this.game.start()
+
+    window.addEventListener('resize', () => {
+      this.game.resize()
+    })
   }
 }

@@ -79,8 +79,8 @@ float moonx = 1.0;
 float moony = 9.6;
 //float sunx = 1.0;
 //float suny = 1.6;
-float cloudy = 0.1;
-float height = 2.0;
+float cloudy = 0.4;
+float height = 500.0;
 
 //rendering quality 
 const int steps = 16; //16 is fast, 128 or 256 is extreme high
@@ -97,7 +97,7 @@ float cloudfar = 1e3; //15e3 17e3
 
 float startreshold = 0.999; //0.99 0.98 star density treshold.
 
-const float I = 10.; //sun light power, 10.0 is normal
+const float I = 8.; //sun light power, 10.0 is normal
 const float g = 0.45; //light concentration .76 //.45 //.6  .45 is normaL
 const float g2 = g * g;
 
@@ -337,14 +337,14 @@ vec4 generate(in vec2 uv, in vec2 fragCoord, in vec2 sunpos, in float t) {
 		att = sunpos.y / -.20 * 0.125;
 		staratt = sunpos.y / -.20;
 		sunpos.y = -sunpos.y;
-						}
+	}
 	
 	vec3 O = vec3(0., height, 0.);
 
 	vec3 D = normalize(rotate_y(rotate_x(vec3(0.0, 0.0, 1.0),-uv.y*M_PI/2.0),-uv.x*M_PI+camroty));
 
 	if (D.y <= -0.15) {
-		D.y = -0.3 -D.y;
+		D.y = -0.3 - D.y;
 	}
 	
 	Ds= normalize(rotate_y(rotate_x(vec3(0.0, 0.0, 1.0),-sunpos.y*M_PI/2.0),-sunpos.x*M_PI));
@@ -356,7 +356,7 @@ vec4 generate(in vec2 uv, in vec2 fragCoord, in vec2 sunpos, in float t) {
 	float starcolor = StableStarField(fragCoord,startreshold);
 	color += vec3(scat*starcolor*staratt);
 	float env = 1.0;
-	return(vec4(env * pow(color, vec3(.7)),1.0));
+	return(vec4(env * pow(color, vec3(.7)), 1.0));
 }
 
 void main() {

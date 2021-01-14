@@ -13,15 +13,15 @@ export class PlantsController {
       const grassMesh = meshes.meshes.find(x => x.name === 'GrassPatch01') as Mesh
 
       const tex = new Texture('assets/grass.png', ground.getScene())
+      tex.hasAlpha = true
       tex.vScale = -1
 
       const grassMat = new PBRMaterial('grass', ground.getScene())
-      grassMat.albedoColor = Color3.White()
       grassMat.albedoTexture = tex
-      grassMat.roughness = 1
-      grassMat.metallic = 0
+      grassMat.directIntensity = 4
+      grassMat.roughness = .7
+      grassMat.metallic = .3
       grassMat.specularIntensity = 0
-      grassMat.albedoTexture.hasAlpha = true
       grassMat.useAlphaFromAlbedoTexture = true
       grassMat.transparencyMode = Material.MATERIAL_ALPHATEST
       grassMat.backFaceCulling = false

@@ -1,4 +1,4 @@
-import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FreeCamera, HemisphericLight, Mesh, Quaternion, Scene, ShaderMaterial, StandardMaterial, Texture, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
+import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FreeCamera, HemisphericLight, Light, Mesh, Quaternion, Scene, ShaderMaterial, StandardMaterial, Texture, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
 import { GameController } from '../game.controller'
 import { InputController } from '../input.controller'
 import { getSkyMaterial } from '../materials/sky.material'
@@ -25,6 +25,7 @@ export class GameScreen implements Screen {
   world: WorldController
   player: PlayerController
   overlay: OverlayController
+  godrayMaterial: StandardMaterial
 
   gameTime = 0
   sunPosition = new Vector3(0, 0, 1)
@@ -103,17 +104,17 @@ export class GameScreen implements Screen {
     this.godrays.weight = 0.98767
     this.godrays.density = 0.996
 
-    const godrayMaterial = new StandardMaterial('godrayMaterial', this.scene)
-    godrayMaterial.emissiveColor = Color3.White()
-    godrayMaterial.diffuseColor = Color3.Black()
-    this.godrays.mesh.material = godrayMaterial
+    this.godrayMaterial = new StandardMaterial('godrayMaterial', this.scene)
+    this.godrayMaterial.emissiveColor = Color3.White()
+    this.godrayMaterial.diffuseColor = Color3.Black()
+    this.godrays.mesh.material = this.godrayMaterial
 
     this.light = new DirectionalLight('light', new Vector3(-25, -10, 0).normalize(), this.scene)
-    this.light.intensity = 2
+    this.light.intensity = 1
     this.light.shadowMinZ = this.camera.minZ
     this.light.shadowMaxZ = this.camera.maxZ
     this.ambientLight = new HemisphericLight('ambientLight', this.light.direction.clone(), this.scene)
-    this.ambientLight.intensity = .4
+    this.ambientLight.intensity = .2
 
     this.shadowGenerator = new CascadedShadowGenerator(512, this.light)
     this.shadowGenerator.lambda = .99
@@ -121,7 +122,7 @@ export class GameScreen implements Screen {
     this.shadowGenerator.enableSoftTransparentShadow = true
     this.shadowGenerator.bias = .001
     this.shadowGenerator.normalBias = .02
-    this.shadowGenerator.setDarkness(0.75)
+    this.shadowGenerator.setDarkness(0.667)
     this.shadowGenerator.stabilizeCascades = true
     this.shadowGenerator.splitFrustum()
 
@@ -142,6 +143,10 @@ export class GameScreen implements Screen {
 
     this.scene.onBeforeRenderObservable.add(() => {
       this.update();
+    })
+
+    this.scene.onAfterActiveMeshesEvaluationObservable.add(() => {
+      this.player.updateCamera();
     })
   }
 
@@ -179,9 +184,9 @@ export class GameScreen implements Screen {
     this.overlaySceneCamera.minZ = this.camera.minZ
     this.overlaySceneCamera.maxZ = this.camera.maxZ
 
-    this.gameTime += 0.005
+    this.gameTime += 0.002
 
-    this.sunPosition.rotateByQuaternionToRef(new Quaternion(-.0001, 0, 0, this.sunPosition.toQuaternion().w), this.sunPosition)
+    this.sunPosition.rotateByQuaternionToRef(new Quaternion(-.0002, 0, 0, this.sunPosition.toQuaternion().w), this.sunPosition)
 
     const howMuchDay = Math.pow(Math.max(0, 0.1 + this.sunPosition.y), .5)
 
@@ -189,9 +194,10 @@ export class GameScreen implements Screen {
 
     this.light.intensity = howMuchDay
     this.light.specular = Color3.White().scale(Math.max(0, Math.min(1, -3.4 + howMuchDay * 8)))
-    this.ambientLight.diffuse = Color3.White().scale(howMuchDay).add(Color3.FromHexString('#16228F').scale(1 - howMuchDay))
+    this.godrayMaterial.emissiveColor = Color3.White().scale(howMuchDay).add(Color3.FromHexString('#FFAA67').toLinearSpace().scale(1 - howMuchDay))
+    this.ambientLight.diffuse = Color3.White().scale(howMuchDay).add(Color3.FromHexString('#16228F').toLinearSpace().scale(1 - howMuchDay))
+    this.ambientLight.groundColor = this.ambientLight.diffuse.clone().scale(.5)
     this.ambientLight.specular = this.light.specular.scale(.99).add(new Color3(0.01, 0.01, 0.01)) // scale + add to fix bug where specular never shows up again after reaching 0
-    this.ambientLight.intensity = Math.max(0.2, howMuchDay)
 
     this.water.setWaterColor(Color3.FromHexString('#2D7493').scale(Math.max(0, Math.min(1, howMuchDay * 2))))
 
