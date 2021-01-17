@@ -1,5 +1,5 @@
 import { ArcRotateCamera, Color4, Scene, Vector3 } from '@babylonjs/core'
-import { AdvancedDynamicTexture, Button, TextBlock } from '@babylonjs/gui'
+import { AdvancedDynamicTexture, Button, Image, TextBlock } from '@babylonjs/gui'
 import { GameController } from '../game.controller'
 import { Screen } from '../models'
 import { CharacterCreatorScreen } from './characterCreator.screen'
@@ -14,6 +14,24 @@ export class MainScreen implements Screen {
     new ArcRotateCamera('camera', 0, 0, 1, new Vector3(), this.scene)
 
     const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI('UI')
+
+    var image = new Image('bkg', '/assets/welcome.png')
+    image.height = 1
+    image.width = 1
+
+    advancedTexture.onBeginLayoutObservable.add(() => {
+      const aspect = ((image as any)._imageWidth / (image as any)._imageHeight) / (advancedTexture.getSize().width / advancedTexture.getSize().height)
+
+      if (aspect > 1) {
+        image.width = aspect
+        image.height = 1
+      } else {
+        image.width = 1
+        image.height = 1 / aspect
+      }
+    })
+    
+    advancedTexture.addControl(image)
 
     const textblock = new TextBlock()
     textblock.text = 'Welcome to Austin Social!'

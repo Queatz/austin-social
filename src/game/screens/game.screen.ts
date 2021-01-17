@@ -1,4 +1,4 @@
-import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FreeCamera, HemisphericLight, Light, Mesh, Quaternion, Scene, ShaderMaterial, StandardMaterial, Texture, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
+import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FreeCamera, HemisphericLight, Mesh, Quaternion, Scene, ShaderMaterial, StandardMaterial, Texture, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
 import { GameController } from '../game.controller'
 import { InputController } from '../input.controller'
 import { getSkyMaterial } from '../materials/sky.material'
@@ -28,7 +28,7 @@ export class GameScreen implements Screen {
   godrayMaterial: StandardMaterial
 
   gameTime = 0
-  sunPosition = new Vector3(0, 0, 1)
+  sunPosition = new Vector3(0, .5, 1)
 
   constructor(public game: GameController) {
     this.scene = new Scene(game.engine)
@@ -137,37 +137,27 @@ export class GameScreen implements Screen {
 
     this.world = new WorldController(this.scene, this.shadowGenerator, 'peninsula world.glb')
 
-    this.player = new PlayerController(this, this.shadowGenerator, this.water, this.world, this.input)
-    
     this.overlay = new OverlayController(this.overlayScene)
 
+    this.player = new PlayerController(
+      this.scene,
+      this.overlay,
+      this.pipeline,
+      this.game.say,
+      this.camera,
+      this.shadowGenerator,
+      this.water,
+      this.world,
+      this.input
+    )
+    
     this.scene.onBeforeRenderObservable.add(() => {
       this.update();
-    })
-
-    this.scene.onAfterActiveMeshesEvaluationObservable.add(() => {
-      this.player.updateCamera();
     })
   }
 
   start(): void {
     this.game.music.play('Anya_of_Earth.ogg', this.scene)
-  }
-
-  isUnderwater() {
-    return this.pipeline.imageProcessing.colorCurvesEnabled
-  }
-
-  setUnderwater(isUnder: boolean) {
-    if (isUnder) {
-      const colorCurves = this.pipeline.imageProcessing.colorCurves!
-      colorCurves.globalHue = 210
-      colorCurves.globalDensity = 100
-      colorCurves.globalExposure = -100
-      this.pipeline.imageProcessing.colorCurvesEnabled = true
-    } else {
-      this.pipeline.imageProcessing.colorCurvesEnabled = false
-    }
   }
 
   dispose(): void {
@@ -206,8 +196,6 @@ export class GameScreen implements Screen {
     this.godrays.mesh.position = this.sunPosition.scale(500).add(this.camera.position)
 
     this.light.position = this.player.hero.position.clone().subtract(this.light.direction.scale(50))
-
-    this.pipeline.depthOfField.fStop = 1.2 + (1 - this.player.weights.sitting) * (11 - 1.2)
 
     let shaderMaterial = this.scene.getMaterialByName('skyCustomShader') as ShaderMaterial
     shaderMaterial.setFloat('time', this.gameTime)

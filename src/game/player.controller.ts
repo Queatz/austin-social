@@ -1,14 +1,30 @@
-import { AbstractMesh, Animation, CascadedShadowGenerator, Color3, DeepImmutableObject, EasingFunction, Material, Mesh, MeshBuilder, MorphTarget, PBRMaterial, PowerEase, Ray, Scalar, SceneLoader, Sound, Vector3 } from '@babylonjs/core'
+import { AbstractMesh, Animation, CascadedShadowGenerator, Color3, DeepImmutableObject, EasingFunction, FollowCamera, Mesh, MeshBuilder, MorphTarget, PBRMaterial, PowerEase, Ray, Scalar, Scene, SceneLoader, Sound, DefaultRenderingPipeline, Vector3, Bone } from '@babylonjs/core'
+import { Observable } from 'rxjs'
 import { InputController } from './input.controller'
-import { GameScreen } from './screens/game.screen'
+import { OverlayController } from './overlay.controller'
 import { WaterController } from './water.controller'
 import { WorldController } from './world.controller'
 
 export class PlayerController {
+  skinToneIndex = 0
+  skinTones = [
+    '#4F2F1C',
+    '#7C492B',
+    '#C1836C',
+    '#F5BC88',
+    '#F0AFAF',
+    '#F4BAB8',
+    '#FFC6C0',
+  ]
+
+  playerName = 'Anya of Earth'
 
   sitting = false
   posing = false
   hero: Mesh
+
+  humanRoot!: Mesh
+  skelHeadBone!: Bone
 
   heroSpeed = .002
   heroSpeedBackwards = .002
@@ -35,46 +51,59 @@ export class PlayerController {
   heroSize = .5
   smileMorph?: MorphTarget
   smileMorphLips?: MorphTarget
+  humanMaterial!: PBRMaterial
+  playerNameMesh?: Mesh
 
-  constructor(private screen: GameScreen, private shadowGenerator: CascadedShadowGenerator, private water: WaterController, private world: WorldController, private input: InputController) {
-    this.walkingSound = new Sound('sound', 'assets/walk.ogg', screen.scene)
+  constructor(
+    private scene: Scene,
+    private overlay: OverlayController | null,
+    private pipeline: DefaultRenderingPipeline | null,
+    private sayObservable: Observable<string> | null,
+    private camera: FollowCamera,
+    private shadowGenerator: CascadedShadowGenerator,
+    private water: WaterController,
+    private world: WorldController,
+    private input: InputController,
+    startBehind = true
+  ) {
+    this.walkingSound = new Sound('sound', 'assets/walk.ogg', scene)
     
     this.hero = MeshBuilder.CreateBox('hero', {
       size: this.heroSize
-    }, screen.scene)
+    }, scene)
 
     this.hero.checkCollisions = true
     this.hero.ellipsoid = new Vector3(1, 4, 1)
     this.hero.ellipsoidOffset = new Vector3(0, 4, 0)
     this.hero.isVisible = false
 
-    SceneLoader.ImportMesh('', '/assets/', 'human.glb', screen.scene, result => {
-      const human = screen.scene.getMeshByName('Human_primitive0') as Mesh
+    SceneLoader.ImportMesh('', '/assets/', 'human.glb', scene, result => {
+      const human = scene.getMeshByName('Human_primitive0') as Mesh
 
-      const material = new PBRMaterial('pbr', screen.scene)
-      material.albedoColor = Color3.FromHexString('#7C492B').toLinearSpace() // F0AFAF // F5BC88 // 4F2F1C // FFC6C0 // 7C492B
-      material.metallic = 0
-      material.roughness = .7
-      material.directIntensity = 1.6
-      material.clearCoat.isEnabled = true
-      material.clearCoat.intensity = .2
-      material.clearCoat.roughness = .4
-      human.material = material
+      this.humanMaterial = new PBRMaterial('pbr', scene)
+      this.humanMaterial.albedoColor = Color3.FromHexString(this.skinTones[this.skinToneIndex]).toLinearSpace()
+      this.humanMaterial.metallic = 0
+      this.humanMaterial.roughness = .7
+      this.humanMaterial.directIntensity = 1.6
+      this.humanMaterial.clearCoat.isEnabled = true
+      this.humanMaterial.clearCoat.intensity = .2
+      this.humanMaterial.clearCoat.roughness = .4
+      human.material = this.humanMaterial
 
-      const eyeL = screen.scene.getMeshByName('Eye L') as Mesh
-      const eyeR = screen.scene.getMeshByName('Eyes R') as Mesh
+      const eyeL = scene.getMeshByName('Eye L') as Mesh
+      const eyeR = scene.getMeshByName('Eyes R') as Mesh
 
       eyeL.rotation = new Vector3(-Math.PI / 2, 0.1, 0)
       eyeR.rotation = new Vector3(-Math.PI / 2, -0.1, 0)
 
       water.addToRenderList(human)
 
-      this.cameraTargetMesh = screen.scene.getMeshByName('Eye L') as Mesh
+      this.cameraTargetMesh = scene.getMeshByName('Eye L') as Mesh
 
       [
-        screen.scene.getMeshByName('Human_primitive0') as Mesh,
-        screen.scene.getMeshByName('Human_primitive1') as Mesh,
-        screen.scene.getMeshByName('Human_primitive2') as Mesh
+        scene.getMeshByName('Human_primitive0') as Mesh,
+        scene.getMeshByName('Human_primitive1') as Mesh,
+        scene.getMeshByName('Human_primitive2') as Mesh
       ].forEach(mesh => {
         mesh.hasVertexAlpha = false
         mesh.onBeforeRenderObservable.add(() => {
@@ -84,47 +113,47 @@ export class PlayerController {
 
       const morphTargetIndex = 4
       this.smileMorph = human.morphTargetManager!.getTarget(morphTargetIndex)
-      this.smileMorphLips = (screen.scene.getMeshByName('Human_primitive1') as Mesh).morphTargetManager!.getTarget(morphTargetIndex)
+      this.smileMorphLips = (scene.getMeshByName('Human_primitive1') as Mesh).morphTargetManager!.getTarget(morphTargetIndex)
 
-      const humanRoot = result[0]
+      this.humanRoot = result[0] as Mesh
 
       this.cameraTarget = MeshBuilder.CreateBox('cameraTarget', {
         width: .0125,
         depth: .0125,
         height: .0125
-      }, screen.scene)
+      }, scene)
 
       this.cameraTarget.isVisible = false
-      screen.camera.lockedTarget = this.cameraTarget
-      screen.camera.cameraDirection = new Vector3(0, 0, -1)
-      screen.camera.rotationOffset = 180
+      camera.lockedTarget = this.cameraTarget
+      camera.cameraDirection = new Vector3(0, 0, startBehind ? -1 : 1)
+      camera.rotationOffset = startBehind ? 180 : 45
 
-      humanRoot.parent = this.hero
-      humanRoot.position.copyFrom(new Vector3(0, .84, 0))
+      this.humanRoot.parent = this.hero
+      this.humanRoot.position.copyFrom(new Vector3(0, .84, 0))
 
-      humanRoot.scaling.scaleInPlace(this.humanScale)
+      this.humanRoot.scaling.scaleInPlace(this.humanScale)
 
       human.receiveShadows = true
       shadowGenerator.addShadowCaster(human)
 
       const skel = human.skeleton!
       const head = skel.bones[skel.getBoneIndexByName('Head')]
-      const skelHeadBone = skel.bones[skel.getBoneIndexByName('Head')]
+      this.skelHeadBone = skel.bones[skel.getBoneIndexByName('Head')]
 
-      screen.overlay.text('Anya of Earth', skelHeadBone, humanRoot, false)
+      this.setPlayerName(this.playerName)
 
-      screen.game.say.subscribe(say => {
-        screen.overlay.text(say, skelHeadBone, humanRoot, true)
+      sayObservable?.subscribe(say => {
+        overlay?.text(say, this.skelHeadBone, this.humanRoot, true)
       })  
 
       // Character Customization
 
-      // SceneLoader.ImportMesh('', '/assets/', 'hairs-short.glb', screen.scene, hairz => {
+      // SceneLoader.ImportMesh('', '/assets/', 'hairs-short.glb', scene, hairz => {
       //   hairz[1].attachToBone(head, humanRoot)
       //   hairz[1].position = new Vector3(0, .3, -.1)
       //   hairz[1].rotation = new Vector3(-Math.PI / 12, 0, 0)
 
-      //   const hairMat = new PBRMaterial('hair', screen.scene)
+      //   const hairMat = new PBRMaterial('hair', scene)
       //   hairMat.albedoColor = Color3.FromHexString('#1A0C09').toLinearSpace().scale(3)
       //   hairMat.roughness = .4
       //   hairMat.metallic = .2
@@ -141,7 +170,7 @@ export class PlayerController {
 
       // Character Customization
 
-      // SceneLoader.ImportMesh('', '/assets/', 'eyes.glb', screen.scene, hairz => {
+      // SceneLoader.ImportMesh('', '/assets/', 'eyes.glb', scene, hairz => {
       //   const skel = human.skeleton!
       //   const head = skel.bones[skel.getBoneIndexByName('Head')]
       //   hairz[1].attachToBone(head, humanRoot)
@@ -154,34 +183,50 @@ export class PlayerController {
       //   this.cameraTargetMesh = Eye L_primitive0
       // })
     })
+
+    // Fix jittery camera when player is animating
+    this.scene.onAfterActiveMeshesEvaluationObservable.add(() => {
+      this.updateCamera();
+    })
+  }
+
+  toggleSkinTone() {
+    this.skinToneIndex = Scalar.Repeat(this.skinToneIndex + 1, this.skinTones.length)
+    this.humanMaterial.albedoColor = Color3.FromHexString(this.skinTones[this.skinToneIndex]).toLinearSpace()
+  }
+
+  setPlayerName(playerName: string) {
+    this.playerName = playerName
+    this.playerNameMesh?.dispose(false, true)
+    this.playerNameMesh = this.overlay?.text(this.playerName, this.skelHeadBone, this.humanRoot, false)
   }
 
   update() {
-    const walkAnim = this.screen.scene.getAnimationGroupByName('Walking')
-    const idleAnim = this.screen.scene.getAnimationGroupByName('Idle')
-    const sittingAnim = this.screen.scene.getAnimationGroupByName('Sitting')
-    const poseAnim = this.screen.scene.getAnimationGroupByName('Pose')
+    const walkAnim = this.scene.getAnimationGroupByName('Walking')
+    const idleAnim = this.scene.getAnimationGroupByName('Idle')
+    const sittingAnim = this.scene.getAnimationGroupByName('Sitting')
+    const poseAnim = this.scene.getAnimationGroupByName('Pose')
 
     let keydown = false, didSit = false, didPose = false
 
     if (this.input.pressed('w')) {  
-        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * this.screen.scene.deltaTime))
+        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * this.scene.deltaTime))
         keydown = true
     }
     if (this.input.pressed('e')) {  
-      this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * 4 * this.screen.scene.deltaTime))
+      this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * 4 * this.scene.deltaTime))
       keydown = true
     }
     if (this.input.pressed('s')) {
-        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(-this.heroSpeedBackwards * this.screen.scene.deltaTime))
+        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(-this.heroSpeedBackwards * this.scene.deltaTime))
         keydown = true
     }
     if (this.input.pressed('a')) {
-        this.hero.rotate(Vector3.Up(), -this.heroRotationSpeed * this.screen.scene.deltaTime)
+        this.hero.rotate(Vector3.Up(), -this.heroRotationSpeed * this.scene.deltaTime)
         keydown = true
     }
     if (this.input.pressed('d')) {
-        this.hero.rotate(Vector3.Up(), this.heroRotationSpeed * this.screen.scene.deltaTime)
+        this.hero.rotate(Vector3.Up(), this.heroRotationSpeed * this.scene.deltaTime)
         keydown = true
     }
     if (this.input.pressed('b')) {
@@ -211,7 +256,7 @@ export class PlayerController {
       }
         if (this.sitting) {
           this.sitting = false
-          Animation.CreateAndStartAnimation('fov anim', this.screen.camera, 'fov', 60, 30, this.screen.camera.fov, .6, 0, fovEase)
+          Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .6, 0, fovEase)
           this.shadowGenerator.splitFrustum()
         }
 
@@ -230,14 +275,14 @@ export class PlayerController {
           this.sitting = false
           this.animating = true
 
-          Animation.CreateAndStartAnimation('fov anim', this.screen.camera, 'fov', 60, 30, this.screen.camera.fov, .6, 0, fovEase)
+          Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .6, 0, fovEase)
           this.shadowGenerator.splitFrustum()
         } else if (!this.sitting && this.weights.sitting === 0) {
           sittingAnim?.start(true, 1, sittingAnim.from, sittingAnim.to, false)
           this.sitting = true
           this.animating = false
 
-          Animation.CreateAndStartAnimation('fov anim', this.screen.camera, 'fov', 60, 30, this.screen.camera.fov, .4, 0, fovEase)
+          Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .4, 0, fovEase)
           this.shadowGenerator.splitFrustum()
         }
       }
@@ -264,7 +309,7 @@ export class PlayerController {
       const hit = ray.intersectsMesh(this.water.waterMesh as DeepImmutableObject<AbstractMesh>, false)
       
       if (hit.hit) {
-        this.hero.moveWithCollisions(new Vector3(0, 16 * hit.distance * this.screen.scene.deltaTime / 1000, 0))
+        this.hero.moveWithCollisions(new Vector3(0, 16 * hit.distance * this.scene.deltaTime / 1000, 0))
       }
     }
 
@@ -273,34 +318,38 @@ export class PlayerController {
       const hit = ray.intersectsMesh(this.world.ground as DeepImmutableObject<AbstractMesh>, false)
 
       if (!hit.hit) {
-        this.hero.moveWithCollisions(new Vector3(0, -9.81 * this.screen.scene.deltaTime / 1000, 0))
+        this.hero.moveWithCollisions(new Vector3(0, -9.81 * this.scene.deltaTime / 1000, 0))
       } else {
         this.hero.position.y = hit.pickedPoint!.y + this.heroSize / 2
       }
     }
 
     if (this.water.waterMesh) {
-      const ray = new Ray(this.screen.camera.position, new Vector3(0, 1, 0))
+      const ray = new Ray(this.camera.position, new Vector3(0, 1, 0))
       const hit = ray.intersectsMesh(this.water.waterMesh as DeepImmutableObject<AbstractMesh>, false)
       
-      if (hit.hit && !this.screen.isUnderwater()) {
-        this.screen.setUnderwater(true)
-      } else if (!hit.hit && this.screen.isUnderwater()) {
-        this.screen.setUnderwater(false)
+      if (hit.hit && !this.isUnderwater()) {
+        this.setUnderwater(true)
+      } else if (!hit.hit && this.isUnderwater()) {
+        this.setUnderwater(false)
       }
     }
 
     this.updateAnimations()
+
+    if (this.pipeline) {
+      this.pipeline.depthOfField.fStop = 1.2 + (1 - this.weights.sitting) * (11 - 1.2)
+    }
   }
 
   updateAnimations() {
     const [ animating, weights, scene, sitting, posing ] = [
-       this.animating, this.weights, this.screen.scene, this.sitting, this.posing
+       this.animating, this.weights, this.scene, this.sitting, this.posing
     ]
 
     const speed = 4
     
-    if (this.screen.scene.deltaTime) {
+    if (this.scene.deltaTime) {
       if (animating && weights.walking < 1) {
         weights.walking += scene.deltaTime / 1000 * speed
       } else if (!animating && weights.walking > 0) {
@@ -331,17 +380,17 @@ export class PlayerController {
       weights.pose = Math.min(1, Math.max(0, weights.pose))
     }
 
-    const walkAnim = this.screen.scene.getAnimationGroupByName('Walking')
-    const idleAnim = this.screen.scene.getAnimationGroupByName('Idle')
-    const sittingAnim = this.screen.scene.getAnimationGroupByName('Sitting')
-    const poseAnim = this.screen.scene.getAnimationGroupByName('Pose')
+    const walkAnim = this.scene.getAnimationGroupByName('Walking')
+    const idleAnim = this.scene.getAnimationGroupByName('Idle')
+    const sittingAnim = this.scene.getAnimationGroupByName('Sitting')
+    const poseAnim = this.scene.getAnimationGroupByName('Pose')
     walkAnim?.setWeightForAllAnimatables(weights.walking)
     sittingAnim?.setWeightForAllAnimatables(weights.sitting)
     idleAnim?.setWeightForAllAnimatables(weights.idle)
     poseAnim?.setWeightForAllAnimatables(weights.pose)
 
     if (this.smile !== this.smileTarget) {
-      this.smile += 0.005 * this.screen.scene.deltaTime * (this.smile < this.smileTarget ? 1 : -1)
+      this.smile += 0.005 * this.scene.deltaTime * (this.smile < this.smileTarget ? 1 : -1)
       this.smile = Scalar.Clamp(this.smile, 0, 1)
     }
 
@@ -364,7 +413,29 @@ export class PlayerController {
         this.cameraTarget!.rotationQuaternion = this.hero.rotationQuaternion.clone()
       }
 
-      this.screen.pipeline.depthOfField.focusDistance = this.cameraTarget!.getDistanceToCamera() * 1000
+      if (this.pipeline?.depthOfField) {
+        this.pipeline.depthOfField.focusDistance = this.cameraTarget!.getDistanceToCamera() * 1000
+      }
+    }
+  }
+
+  isUnderwater() {
+    return this.pipeline?.imageProcessing.colorCurvesEnabled
+  }
+
+  setUnderwater(isUnder: boolean) {
+    if (!this.pipeline) {
+      return
+    }
+
+    if (isUnder) {
+      const colorCurves = this.pipeline.imageProcessing.colorCurves!
+      colorCurves.globalHue = 210
+      colorCurves.globalDensity = 100
+      colorCurves.globalExposure = -100
+      this.pipeline.imageProcessing.colorCurvesEnabled = true
+    } else {
+      this.pipeline.imageProcessing.colorCurvesEnabled = false
     }
   }
 }

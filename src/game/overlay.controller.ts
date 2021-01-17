@@ -5,7 +5,7 @@ export class OverlayController {
 
   }
 
-  text(text: string, bone: Bone, hero: AbstractMesh, vanish: boolean) {
+  text(text: string, bone: Bone, hero: AbstractMesh, vanish: boolean): Mesh {
     var font_size = 48
     var font = 'normal ' + font_size + 'px Arial'
     
@@ -63,6 +63,8 @@ export class OverlayController {
       plane.position.addInPlace(new Vector3(0, -1, 0))
     }
     plane.attachToBone(bone, hero)
+
+    return plane
   }
 
   private canvasRoundRect(context: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, radius: number) {
