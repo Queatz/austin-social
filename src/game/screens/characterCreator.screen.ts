@@ -1,5 +1,5 @@
 import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FreeCamera, HemisphericLight, Mesh, Scene, Vector3 } from '@babylonjs/core'
-import { AdvancedDynamicTexture, Button, Image, InputText } from '@babylonjs/gui'
+import { AdvancedDynamicTexture, Button, Control, Image, InputText, Rectangle } from '@babylonjs/gui'
 import { GameController } from '../game.controller'
 import { InputController } from '../input.controller'
 import { Screen } from '../models'
@@ -118,16 +118,18 @@ export class CharacterCreatorScreen implements Screen {
       this.input,
       false
     )
+
+    this.player.randomize()
     
     this.scene.onBeforeRenderObservable.add(() => {
-      this.update();
+      this.update()
     })
   }
 
   setupUI(overlayScene: Scene) {
     const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI('UI', true, overlayScene)
 
-    this.addButton(advancedTexture, 'Start the Game', () => {
+    this.addButton(advancedTexture, 'Start Playing', () => {
       const gameScreen = new GameScreen(this.game)
       gameScreen.player.skinToneIndex = this.player.skinToneIndex
       gameScreen.player.playerName = this.player.playerName
@@ -138,21 +140,33 @@ export class CharacterCreatorScreen implements Screen {
       this.player.toggleSkinTone()
     }).left = advancedTexture.getSize().width / 2 - 120
 
+    const rInput = new Rectangle('rInput')
+    rInput.width = '200px'
+    rInput.height = '50px'
+    rInput.thickness = 1
+    rInput.color = 'black'
+    rInput.cornerRadius = 15
+    rInput.top = -advancedTexture.getSize().height / 2 + 40
+
     const input = new InputText()
-    input.width = '200px'
-    input.maxWidth = '200px'
-    input.height = '40px'
+    input.height = 1
+    input.width = 1
     input.text = 'Anya of Earth'
     input.color = 'white'
-    input.background = '#cccccc'
+    input.thickness = 0
+    input.autoStretchWidth = false
+    input.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER
+    input.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER
     input.isPointerBlocker = true
-    input.top = -advancedTexture.getSize().height / 2 + 40
+    input.background = 'rgba(255, 255, 255, .125)'
+    input.focusedBackground = 'rgba(255, 255, 255, .25)'
 
     input.onTextChangedObservable.add(input => {
       this.player.setPlayerName(input.text)
     })
 
-    advancedTexture.addControl(input)
+    advancedTexture.addControl(rInput)
+    rInput.addControl(input)
   }
 
   private addButton(advancedTexture: AdvancedDynamicTexture, text: string, callback: () => void) {
@@ -162,9 +176,7 @@ export class CharacterCreatorScreen implements Screen {
     button.color = 'black'
     button.cornerRadius = 20
     button.background = 'white'
-    button.onPointerUpObservable.add(() => {
-      callback()
-    })
+    button.onPointerUpObservable.add(() => callback())
     advancedTexture.addControl(button)
 
     return button

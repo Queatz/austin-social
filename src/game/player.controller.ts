@@ -1,4 +1,4 @@
-import { AbstractMesh, Animation, CascadedShadowGenerator, Color3, DeepImmutableObject, EasingFunction, FollowCamera, Mesh, MeshBuilder, MorphTarget, PBRMaterial, PowerEase, Ray, Scalar, Scene, SceneLoader, Sound, DefaultRenderingPipeline, Vector3, Bone } from '@babylonjs/core'
+import { AbstractMesh, Animation, CascadedShadowGenerator, Color3, DeepImmutableObject, EasingFunction, FollowCamera, Mesh, MeshBuilder, MorphTarget, PBRMaterial, PowerEase, Ray, Scalar, Scene, SceneLoader, Sound, DefaultRenderingPipeline, Vector3, Bone, AnimationGroup } from '@babylonjs/core'
 import { Observable } from 'rxjs'
 import { InputController } from './input.controller'
 import { OverlayController } from './overlay.controller'
@@ -41,6 +41,8 @@ export class PlayerController {
     pose: 0
   }
 
+  animationGroups = {} as { [key: string]: AnimationGroup }
+
   smile = 0
   smileTarget = 0
 
@@ -63,8 +65,9 @@ export class PlayerController {
     private shadowGenerator: CascadedShadowGenerator,
     private water: WaterController,
     private world: WorldController,
-    private input: InputController,
-    startBehind = true
+    private input?: InputController,
+    private startBehind = true,
+    private attachToCamera = true
   ) {
     this.walkingSound = new Sound('sound', 'assets/walk.ogg', scene)
     
@@ -77,8 +80,8 @@ export class PlayerController {
     this.hero.ellipsoidOffset = new Vector3(0, 4, 0)
     this.hero.isVisible = false
 
-    SceneLoader.ImportMesh('', '/assets/', 'human.glb', scene, result => {
-      const human = scene.getMeshByName('Human_primitive0') as Mesh
+    SceneLoader.ImportMesh('', '/assets/', 'human.glb', scene, (meshes, particleSystems, skeletons, animationGroups) => {
+      const human = meshes.find(x => x.name === 'Human_primitive0') as Mesh
 
       this.humanMaterial = new PBRMaterial('pbr', scene)
       this.humanMaterial.albedoColor = Color3.FromHexString(this.skinTones[this.skinToneIndex]).toLinearSpace()
@@ -90,20 +93,22 @@ export class PlayerController {
       this.humanMaterial.clearCoat.roughness = .4
       human.material = this.humanMaterial
 
-      const eyeL = scene.getMeshByName('Eye L') as Mesh
-      const eyeR = scene.getMeshByName('Eyes R') as Mesh
+      const eyeL = meshes.find(x => x.name === 'Eye L') as Mesh
+      const eyeR = meshes.find(x => x.name === 'Eyes R') as Mesh
 
       eyeL.rotation = new Vector3(-Math.PI / 2, 0.1, 0)
       eyeR.rotation = new Vector3(-Math.PI / 2, -0.1, 0)
 
       water.addToRenderList(human)
 
-      this.cameraTargetMesh = scene.getMeshByName('Eye L') as Mesh
+      if (this.attachToCamera) {
+        this.cameraTargetMesh = meshes.find(x => x.name === 'Eye L') as Mesh
+      }
 
       [
-        scene.getMeshByName('Human_primitive0') as Mesh,
-        scene.getMeshByName('Human_primitive1') as Mesh,
-        scene.getMeshByName('Human_primitive2') as Mesh
+        meshes.find(x => x.name === 'Human_primitive0') as Mesh,
+        meshes.find(x => x.name === 'Human_primitive1') as Mesh,
+        meshes.find(x => x.name === 'Human_primitive2') as Mesh
       ].forEach(mesh => {
         mesh.hasVertexAlpha = false
         mesh.onBeforeRenderObservable.add(() => {
@@ -113,20 +118,28 @@ export class PlayerController {
 
       const morphTargetIndex = 4
       this.smileMorph = human.morphTargetManager!.getTarget(morphTargetIndex)
-      this.smileMorphLips = (scene.getMeshByName('Human_primitive1') as Mesh).morphTargetManager!.getTarget(morphTargetIndex)
+      this.smileMorphLips = (meshes.find(x => x.name === 'Human_primitive1') as Mesh).morphTargetManager!.getTarget(morphTargetIndex)
 
-      this.humanRoot = result[0] as Mesh
 
-      this.cameraTarget = MeshBuilder.CreateBox('cameraTarget', {
-        width: .0125,
-        depth: .0125,
-        height: .0125
-      }, scene)
+      this.animationGroups['walk'] = animationGroups.find(x => x.name === 'Walking')!
+      this.animationGroups['idle'] = animationGroups.find(x => x.name === 'Idle')!
+      this.animationGroups['sitting'] = animationGroups.find(x => x.name === 'Sitting')!
+      this.animationGroups['pose'] = animationGroups.find(x => x.name === 'Pose')!
 
-      this.cameraTarget.isVisible = false
-      camera.lockedTarget = this.cameraTarget
-      camera.cameraDirection = new Vector3(0, 0, startBehind ? -1 : 1)
-      camera.rotationOffset = startBehind ? 180 : 45
+      this.humanRoot = meshes.find(x => x.name === '__root__') as Mesh
+
+      if (this.attachToCamera) {
+        this.cameraTarget = MeshBuilder.CreateBox('cameraTarget', {
+          width: .0125,
+          depth: .0125,
+          height: .0125
+        }, scene)
+
+        this.cameraTarget.isVisible = false
+        camera.lockedTarget = this.cameraTarget
+        camera.cameraDirection = new Vector3(0, 0, startBehind ? -1 : 1)
+        camera.rotationOffset = startBehind ? 180 : 45
+      }
 
       this.humanRoot.parent = this.hero
       this.humanRoot.position.copyFrom(new Vector3(0, .84, 0))
@@ -185,9 +198,12 @@ export class PlayerController {
     })
 
     // Fix jittery camera when player is animating
-    this.scene.onAfterActiveMeshesEvaluationObservable.add(() => {
-      this.updateCamera();
-    })
+
+    if (this.attachToCamera) {
+      this.scene.onAfterActiveMeshesEvaluationObservable.add(() => {
+        this.updateCamera();
+      })
+    }
   }
 
   toggleSkinTone() {
@@ -201,48 +217,49 @@ export class PlayerController {
     this.playerNameMesh = this.overlay?.text(this.playerName, this.skelHeadBone, this.humanRoot, false)
   }
 
-  update() {
-    const walkAnim = this.scene.getAnimationGroupByName('Walking')
-    const idleAnim = this.scene.getAnimationGroupByName('Idle')
-    const sittingAnim = this.scene.getAnimationGroupByName('Sitting')
-    const poseAnim = this.scene.getAnimationGroupByName('Pose')
+  randomize() {
+    this.skinToneIndex = Math.trunc(Scalar.RandomRange(0, this.skinTones.length))
+  }
 
+  update() {
     let keydown = false, didSit = false, didPose = false
 
-    if (this.input.pressed('w')) {  
+    if (this.input) {
+      if (this.input.pressed('w')) {  
         this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * this.scene.deltaTime))
         keydown = true
-    }
-    if (this.input.pressed('e')) {  
-      this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * 4 * this.scene.deltaTime))
-      keydown = true
-    }
-    if (this.input.pressed('s')) {
-        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(-this.heroSpeedBackwards * this.scene.deltaTime))
+      }
+      if (this.input.pressed('e')) {  
+        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * 4 * this.scene.deltaTime))
         keydown = true
-    }
-    if (this.input.pressed('a')) {
-        this.hero.rotate(Vector3.Up(), -this.heroRotationSpeed * this.scene.deltaTime)
-        keydown = true
-    }
-    if (this.input.pressed('d')) {
-        this.hero.rotate(Vector3.Up(), this.heroRotationSpeed * this.scene.deltaTime)
-        keydown = true
-    }
-    if (this.input.pressed('b')) {
-        keydown = true
-    }
-    if (this.input.pressed('r')) {
-        didSit = true
-    }
-    if (this.input.pressed('p')) {
-        didPose = true
-    }
-    if (this.input.pressed('t')) {
-      if (this.smile === 0) {
-        this.smileTarget = 1
-      } else if (this.smile === 1) {
-        this.smileTarget = 0
+      }
+      if (this.input.pressed('s')) {
+          this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(-this.heroSpeedBackwards * this.scene.deltaTime))
+          keydown = true
+      }
+      if (this.input.pressed('a')) {
+          this.hero.rotate(Vector3.Up(), -this.heroRotationSpeed * this.scene.deltaTime)
+          keydown = true
+      }
+      if (this.input.pressed('d')) {
+          this.hero.rotate(Vector3.Up(), this.heroRotationSpeed * this.scene.deltaTime)
+          keydown = true
+      }
+      if (this.input.pressed('b')) {
+          keydown = true
+      }
+      if (this.input.pressed('r')) {
+          didSit = true
+      }
+      if (this.input.pressed('p')) {
+          didPose = true
+      }
+      if (this.input.pressed('t')) {
+        if (this.smile === 0) {
+          this.smileTarget = 1
+        } else if (this.smile === 1) {
+          this.smileTarget = 0
+        }
       }
     }
 
@@ -256,13 +273,16 @@ export class PlayerController {
       }
         if (this.sitting) {
           this.sitting = false
-          Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .6, 0, fovEase)
-          this.shadowGenerator.splitFrustum()
+
+          if (this.attachToCamera) {
+            Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .6, 0, fovEase)
+            this.shadowGenerator.splitFrustum()
+          }
         }
 
         if (!this.animating) {
           this.animating = true
-          walkAnim?.start(true, 1, walkAnim.from, walkAnim.to, false)
+          this.animationGroups['walk']?.start(true, 1, this.animationGroups['walk'].from, this.animationGroups['walk'].to, false)
         }
     }
     else {
@@ -275,15 +295,19 @@ export class PlayerController {
           this.sitting = false
           this.animating = true
 
-          Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .6, 0, fovEase)
-          this.shadowGenerator.splitFrustum()
+          if (this.attachToCamera) {
+            Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .6, 0, fovEase)
+            this.shadowGenerator.splitFrustum()
+          }
         } else if (!this.sitting && this.weights.sitting === 0) {
-          sittingAnim?.start(true, 1, sittingAnim.from, sittingAnim.to, false)
+          this.animationGroups['sitting']?.start(true, 1, this.animationGroups['sitting'].from, this.animationGroups['sitting'].to, false)
           this.sitting = true
           this.animating = false
 
-          Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .4, 0, fovEase)
-          this.shadowGenerator.splitFrustum()
+          if (this.attachToCamera) {
+            Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .4, 0, fovEase)
+            this.shadowGenerator.splitFrustum()
+          }
         }
       }
 
@@ -292,14 +316,14 @@ export class PlayerController {
           this.posing = false
           this.animating = true
         } else if (!this.posing && this.weights.pose === 0) {
-          poseAnim?.start(true, 1, poseAnim!.to, poseAnim!.to, false)
+          this.animationGroups['pose']?.start(true, 1, this.animationGroups['pose']!.to, this.animationGroups['pose']!.to, false)
           this.posing = true
           this.animating = false
         }
       }
 
       if (this.animating && !this.sitting && !this.posing) {
-        idleAnim?.start(true, 1, idleAnim.from, idleAnim.to, false)
+        this.animationGroups['idle']?.start(true, 1, this.animationGroups['idle'].from, this.animationGroups['idle'].to, false)
         this.animating = false
       }
     }
@@ -324,7 +348,8 @@ export class PlayerController {
       }
     }
 
-    if (this.water.waterMesh) {
+    // TODO probably does not belong in player controller
+    if (this.attachToCamera && this.water.waterMesh) {
       const ray = new Ray(this.camera.position, new Vector3(0, 1, 0))
       const hit = ray.intersectsMesh(this.water.waterMesh as DeepImmutableObject<AbstractMesh>, false)
       
@@ -337,7 +362,7 @@ export class PlayerController {
 
     this.updateAnimations()
 
-    if (this.pipeline) {
+    if (this.attachToCamera && this.pipeline) {
       this.pipeline.depthOfField.fStop = 1.2 + (1 - this.weights.sitting) * (11 - 1.2)
     }
   }
@@ -380,14 +405,10 @@ export class PlayerController {
       weights.pose = Math.min(1, Math.max(0, weights.pose))
     }
 
-    const walkAnim = this.scene.getAnimationGroupByName('Walking')
-    const idleAnim = this.scene.getAnimationGroupByName('Idle')
-    const sittingAnim = this.scene.getAnimationGroupByName('Sitting')
-    const poseAnim = this.scene.getAnimationGroupByName('Pose')
-    walkAnim?.setWeightForAllAnimatables(weights.walking)
-    sittingAnim?.setWeightForAllAnimatables(weights.sitting)
-    idleAnim?.setWeightForAllAnimatables(weights.idle)
-    poseAnim?.setWeightForAllAnimatables(weights.pose)
+    this.animationGroups['walk']?.setWeightForAllAnimatables(weights.walking)
+    this.animationGroups['sitting']?.setWeightForAllAnimatables(weights.sitting)
+    this.animationGroups['idle']?.setWeightForAllAnimatables(weights.idle)
+    this.animationGroups['pose']?.setWeightForAllAnimatables(weights.pose)
 
     if (this.smile !== this.smileTarget) {
       this.smile += 0.005 * this.scene.deltaTime * (this.smile < this.smileTarget ? 1 : -1)

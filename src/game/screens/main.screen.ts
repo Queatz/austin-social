@@ -35,15 +35,19 @@ export class MainScreen implements Screen {
 
     const textblock = new TextBlock()
     textblock.text = 'Welcome to Austin Social!'
-    textblock.fontSize = 24
+    textblock.fontSize = 32
     textblock.top = '-100px'
     textblock.color = 'white'
+    textblock.outlineWidth = 2
+    textblock.outlineColor = '#222222'
     advancedTexture.addControl(textblock)
 
-    const button1 = Button.CreateSimpleButton('button', 'Enter Game')
+    const button1 = Button.CreateSimpleButton('button', 'Play Game')
     button1.width = '200px'
     button1.height = '40px'
-    button1.color = 'black'
+    button1.color = 'rgba(0, 0, 0, .5)'
+    button1.textBlock!.color = 'black'
+    button1.textBlock!.fontWeight = 'bold'
     button1.cornerRadius = 20
     button1.background = 'white'
     button1.onPointerUpObservable.add(() => {
@@ -54,7 +58,8 @@ export class MainScreen implements Screen {
     const button2 = Button.CreateSimpleButton('button', 'Customize Character')
     button2.width = '200px'
     button2.height = '40px'
-    button2.color = 'black'
+    button2.color = 'rgba(0, 0, 0, .5)'
+    button2.textBlock!.color = 'purple'
     button2.cornerRadius = 20
     button2.background = 'white'
     button2.top = '60px'

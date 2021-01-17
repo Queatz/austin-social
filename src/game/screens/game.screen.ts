@@ -29,6 +29,8 @@ export class GameScreen implements Screen {
 
   gameTime = 0
   sunPosition = new Vector3(0, .5, 1)
+  p: PlayerController
+  p2: PlayerController
 
   constructor(public game: GameController) {
     this.scene = new Scene(game.engine)
@@ -150,6 +152,41 @@ export class GameScreen implements Screen {
       this.world,
       this.input
     )
+
+    this.p = new PlayerController(
+      this.scene,
+      this.overlay,
+      this.pipeline,
+      this.game.say,
+      this.camera,
+      this.shadowGenerator,
+      this.water,
+      this.world,
+      undefined,
+      false,
+      false
+    )
+
+    this.p.playerName = 'Elizabeth'
+    this.p.skinToneIndex = 4
+    
+    this.p2 = new PlayerController(
+      this.scene,
+      this.overlay,
+      this.pipeline,
+      this.game.say,
+      this.camera,
+      this.shadowGenerator,
+      this.water,
+      this.world,
+      undefined,
+      false,
+      false
+    )
+
+    this.p2.hero.position.addInPlace(new Vector3(-20, 0, -10))
+    this.p2.hero.rotation = new Vector3(0, Math.PI, 0)
+    this.p2.playerName = 'Gloria'
     
     this.scene.onBeforeRenderObservable.add(() => {
       this.update();
@@ -167,6 +204,8 @@ export class GameScreen implements Screen {
 
   update(): void {
     this.player.update()
+    this.p.update()
+    this.p2.update()
 
     this.overlaySceneCamera.position = this.camera.position.clone()
     this.overlaySceneCamera.rotation = this.camera.rotation.clone()
