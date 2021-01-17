@@ -26,7 +26,7 @@ export class WaterController {
     const waterBump = new Texture('assets/waterbump.png', scene)
     waterBump.uScale = waterBump.vScale = 6
     this.waterMaterial.bumpTexture = waterBump
-    this.waterMaterial.windForce = -2
+    this.waterMaterial.windForce = -1.4
     this.waterMaterial.waveHeight = .02
     this.waterMaterial.bumpHeight = .7
     this.waterMaterial.waveLength = .1

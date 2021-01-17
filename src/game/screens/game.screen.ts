@@ -184,9 +184,9 @@ export class GameScreen implements Screen {
     this.overlaySceneCamera.minZ = this.camera.minZ
     this.overlaySceneCamera.maxZ = this.camera.maxZ
 
-    this.gameTime += 0.002
+    this.gameTime += 0.00002
 
-    this.sunPosition.rotateByQuaternionToRef(new Quaternion(-.0002, 0, 0, this.sunPosition.toQuaternion().w), this.sunPosition)
+    this.sunPosition.rotateByQuaternionToRef(new Quaternion(-.00002, 0, 0, this.sunPosition.toQuaternion().w), this.sunPosition)
 
     const howMuchDay = Math.pow(Math.max(0, 0.1 + this.sunPosition.y), .5)
 

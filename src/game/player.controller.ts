@@ -1,4 +1,4 @@
-import { AbstractMesh, Animation, Bone, CascadedShadowGenerator, Color3, DeepImmutableObject, EasingFunction, Mesh, MeshBuilder, PBRMaterial, PowerEase, Ray, SceneLoader, Sound, Vector3 } from '@babylonjs/core'
+import { AbstractMesh, Animation, CascadedShadowGenerator, Color3, DeepImmutableObject, EasingFunction, Material, Mesh, MeshBuilder, MorphTarget, PBRMaterial, PowerEase, Ray, Scalar, SceneLoader, Sound, Vector3 } from '@babylonjs/core'
 import { InputController } from './input.controller'
 import { GameScreen } from './screens/game.screen'
 import { WaterController } from './water.controller'
@@ -7,11 +7,12 @@ import { WorldController } from './world.controller'
 export class PlayerController {
 
   sitting = false
+  posing = false
   hero: Mesh
 
   heroSpeed = .002
   heroSpeedBackwards = .002
-  heroRotationSpeed = Math.PI / 360 / 2
+  heroRotationSpeed = Math.PI / 360 / 4
 
   walkingSound: Sound
 
@@ -20,41 +21,70 @@ export class PlayerController {
   weights = {
     idle: 1,
     walking: 0,
-    sitting: 0
+    sitting: 0,
+    pose: 0
   }
+
+  smile = 0
+  smileTarget = 0
 
   cameraTargetMesh?: Mesh
   cameraTarget?: Mesh
 
   humanScale = .480304
-  
+  heroSize = .5
+  smileMorph?: MorphTarget
+  smileMorphLips?: MorphTarget
+
   constructor(private screen: GameScreen, private shadowGenerator: CascadedShadowGenerator, private water: WaterController, private world: WorldController, private input: InputController) {
     this.walkingSound = new Sound('sound', 'assets/walk.ogg', screen.scene)
     
     this.hero = MeshBuilder.CreateBox('hero', {
-      width: .5,
-      depth: .5,
-      height: .5
+      size: this.heroSize
     }, screen.scene)
 
-    this.hero.ellipsoid = new Vector3(.5, .5, .5)
+    this.hero.checkCollisions = true
+    this.hero.ellipsoid = new Vector3(1, 4, 1)
+    this.hero.ellipsoidOffset = new Vector3(0, 4, 0)
     this.hero.isVisible = false
 
     SceneLoader.ImportMesh('', '/assets/', 'human.glb', screen.scene, result => {
-      const human = screen.scene.getMeshByName('Human_Cube') as Mesh
+      const human = screen.scene.getMeshByName('Human_primitive0') as Mesh
 
       const material = new PBRMaterial('pbr', screen.scene)
-      material.albedoColor = Color3.FromHexString('#F0AFAF').toLinearSpace() // F0AFAF // F5BC88 // 4F2F1C // FFC6C0
+      material.albedoColor = Color3.FromHexString('#7C492B').toLinearSpace() // F0AFAF // F5BC88 // 4F2F1C // FFC6C0 // 7C492B
       material.metallic = 0
       material.roughness = .7
       material.directIntensity = 1.6
       material.clearCoat.isEnabled = true
       material.clearCoat.intensity = .2
       material.clearCoat.roughness = .4
-
       human.material = material
 
+      const eyeL = screen.scene.getMeshByName('Eye L') as Mesh
+      const eyeR = screen.scene.getMeshByName('Eyes R') as Mesh
+
+      eyeL.rotation = new Vector3(-Math.PI / 2, 0.1, 0)
+      eyeR.rotation = new Vector3(-Math.PI / 2, -0.1, 0)
+
       water.addToRenderList(human)
+
+      this.cameraTargetMesh = screen.scene.getMeshByName('Eye L') as Mesh
+
+      [
+        screen.scene.getMeshByName('Human_primitive0') as Mesh,
+        screen.scene.getMeshByName('Human_primitive1') as Mesh,
+        screen.scene.getMeshByName('Human_primitive2') as Mesh
+      ].forEach(mesh => {
+        mesh.hasVertexAlpha = false
+        mesh.onBeforeRenderObservable.add(() => {
+          mesh.refreshBoundingInfo(true)
+        })
+      })
+
+      const morphTargetIndex = 4
+      this.smileMorph = human.morphTargetManager!.getTarget(morphTargetIndex)
+      this.smileMorphLips = (screen.scene.getMeshByName('Human_primitive1') as Mesh).morphTargetManager!.getTarget(morphTargetIndex)
 
       const humanRoot = result[0]
 
@@ -69,69 +99,60 @@ export class PlayerController {
       screen.camera.cameraDirection = new Vector3(0, 0, -1)
       screen.camera.rotationOffset = 180
 
-      // Don't need?
-      const armature = screen.scene.getNodeByName('Armature')!
-      armature.isEnabled(false)
-
       humanRoot.parent = this.hero
-      humanRoot.position.addInPlace(new Vector3(0, -2, 0))
+      humanRoot.position.copyFrom(new Vector3(0, .84, 0))
 
       humanRoot.scaling.scaleInPlace(this.humanScale)
-
-      this.hero.ellipsoid = new Vector3(1, 4, 1)
-      this.hero.ellipsoidOffset = new Vector3(0, 2, 0)
-      this.hero.checkCollisions = true
-
-      let skelHeadBone: Bone
 
       human.receiveShadows = true
       shadowGenerator.addShadowCaster(human)
 
-      // Character Customization
+      const skel = human.skeleton!
+      const head = skel.bones[skel.getBoneIndexByName('Head')]
+      const skelHeadBone = skel.bones[skel.getBoneIndexByName('Head')]
 
-      SceneLoader.ImportMesh('', '/assets/', 'hairs-short.glb', screen.scene, hairz => {
-        const skel = human.skeleton!
-        const head = skel.bones[skel.getBoneIndexByName('mixamorig_HeadTop_End')]
-        skelHeadBone = skel.bones[skel.getBoneIndexByName('mixamorig_Head')]
-        hairz[1].attachToBone(head, humanRoot)
-        hairz[1].position = new Vector3(0, -.2, -.2)
-        hairz[1].rotation = new Vector3(-Math.PI / 12, 0, 0)
+      screen.overlay.text('Anya of Earth', skelHeadBone, humanRoot, false)
 
-        screen.overlay.text('Anya of Earth', skelHeadBone, humanRoot, false)
-
-        screen.game.say.subscribe(say => {
-          screen.overlay.text(say, skelHeadBone, humanRoot, true)
-        })
-
-        const hairMat = new PBRMaterial('hair', screen.scene)
-        hairMat.albedoColor = Color3.FromHexString('#1A0C09').toLinearSpace().scale(3)
-        hairMat.roughness = .4
-        hairMat.metallic = .2
-        hairMat.sheen.isEnabled = true
-        hairMat.sheen.linkSheenWithAlbedo = true
-        hairMat.anisotropy.isEnabled = true
-        hairMat.anisotropy.intensity = .8
-        hairMat.backFaceCulling = false
-        hairz[1].material = hairMat
-
-        hairz[1].receiveShadows = true
-        shadowGenerator.addShadowCaster(hairz[1])
-      })
+      screen.game.say.subscribe(say => {
+        screen.overlay.text(say, skelHeadBone, humanRoot, true)
+      })  
 
       // Character Customization
 
-      SceneLoader.ImportMesh('', '/assets/', 'eyes.glb', screen.scene, hairz => {
-        const skel = human.skeleton!
-        const head = skel.bones[skel.getBoneIndexByName('mixamorig_HeadTop_End')]
-        hairz[1].attachToBone(head, humanRoot)
-        hairz[2].attachToBone(head, humanRoot)
-        hairz[1].position = new Vector3(0.068, -0.234956, 0.05)
-        hairz[1].rotation = new Vector3(-Math.PI / 2 - 0.24, 0.2, 0)
-        hairz[2].position = new Vector3(-0.068, -0.234956, 0.05)
-        hairz[2].rotation = new Vector3(-Math.PI / 2 - 0.24, -0.2, 0)
+      // SceneLoader.ImportMesh('', '/assets/', 'hairs-short.glb', screen.scene, hairz => {
+      //   hairz[1].attachToBone(head, humanRoot)
+      //   hairz[1].position = new Vector3(0, .3, -.1)
+      //   hairz[1].rotation = new Vector3(-Math.PI / 12, 0, 0)
 
-        this.cameraTargetMesh = hairz[2] as Mesh
-      })
+      //   const hairMat = new PBRMaterial('hair', screen.scene)
+      //   hairMat.albedoColor = Color3.FromHexString('#1A0C09').toLinearSpace().scale(3)
+      //   hairMat.roughness = .4
+      //   hairMat.metallic = .2
+      //   hairMat.sheen.isEnabled = true
+      //   hairMat.sheen.linkSheenWithAlbedo = true
+      //   hairMat.anisotropy.isEnabled = true
+      //   hairMat.anisotropy.intensity = .8
+      //   hairMat.backFaceCulling = false
+      //   hairz[1].material = hairMat
+
+      //   hairz[1].receiveShadows = true
+      //   shadowGenerator.addShadowCaster(hairz[1])
+      // })
+
+      // Character Customization
+
+      // SceneLoader.ImportMesh('', '/assets/', 'eyes.glb', screen.scene, hairz => {
+      //   const skel = human.skeleton!
+      //   const head = skel.bones[skel.getBoneIndexByName('Head')]
+      //   hairz[1].attachToBone(head, humanRoot)
+      //   hairz[2].attachToBone(head, humanRoot)
+      //   hairz[1].position = new Vector3(0.068, -0.234956, 0.05)
+      //   hairz[1].rotation = new Vector3(-Math.PI / 2 - 0.24, 0.2, 0)
+      //   hairz[2].position = new Vector3(-0.068, -0.234956, 0.05)
+      //   hairz[2].rotation = new Vector3(-Math.PI / 2 - 0.24, -0.2, 0)
+
+      //   this.cameraTargetMesh = Eye L_primitive0
+      // })
     })
   }
 
@@ -139,8 +160,9 @@ export class PlayerController {
     const walkAnim = this.screen.scene.getAnimationGroupByName('Walking')
     const idleAnim = this.screen.scene.getAnimationGroupByName('Idle')
     const sittingAnim = this.screen.scene.getAnimationGroupByName('Sitting')
+    const poseAnim = this.screen.scene.getAnimationGroupByName('Pose')
 
-    let keydown = false, didSit = false
+    let keydown = false, didSit = false, didPose = false
 
     if (this.input.pressed('w')) {  
         this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * this.screen.scene.deltaTime))
@@ -167,6 +189,16 @@ export class PlayerController {
     }
     if (this.input.pressed('r')) {
         didSit = true
+    }
+    if (this.input.pressed('p')) {
+        didPose = true
+    }
+    if (this.input.pressed('t')) {
+      if (this.smile === 0) {
+        this.smileTarget = 1
+      } else if (this.smile === 1) {
+        this.smileTarget = 0
+      }
     }
 
     const fovEase = new PowerEase()
@@ -210,14 +242,25 @@ export class PlayerController {
         }
       }
 
-      if (this.animating && !this.sitting) {
+      if (didPose) {
+        if (this.posing && this.weights.pose === 1) {
+          this.posing = false
+          this.animating = true
+        } else if (!this.posing && this.weights.pose === 0) {
+          poseAnim?.start(true, 1, poseAnim!.to, poseAnim!.to, false)
+          this.posing = true
+          this.animating = false
+        }
+      }
+
+      if (this.animating && !this.sitting && !this.posing) {
         idleAnim?.start(true, 1, idleAnim.from, idleAnim.to, false)
         this.animating = false
       }
     }
 
     if (this.water.waterMesh) {
-      const ray = new Ray(this.hero.position.add(new Vector3(0, -2.1 + 1, 0)), new Vector3(0, 1, 0))
+      const ray = new Ray(this.hero.position.add(new Vector3(0, -.1 + 1 - this.heroSize / 2, 0)), new Vector3(0, 1, 0))
       const hit = ray.intersectsMesh(this.water.waterMesh as DeepImmutableObject<AbstractMesh>, false)
       
       if (hit.hit) {
@@ -226,13 +269,13 @@ export class PlayerController {
     }
 
     if (this.world.ground) {
-      const ray = new Ray(this.hero.position.add(new Vector3(0, -2.1, 0)), new Vector3(0, 1, 0))
+      const ray = new Ray(this.hero.position.add(new Vector3(0, -.1 - this.heroSize / 2, 0)), new Vector3(0, 1, 0))
       const hit = ray.intersectsMesh(this.world.ground as DeepImmutableObject<AbstractMesh>, false)
 
       if (!hit.hit) {
         this.hero.moveWithCollisions(new Vector3(0, -9.81 * this.screen.scene.deltaTime / 1000, 0))
       } else {
-        this.hero.position.y = hit.pickedPoint!.y + 2
+        this.hero.position.y = hit.pickedPoint!.y + this.heroSize / 2
       }
     }
 
@@ -251,8 +294,8 @@ export class PlayerController {
   }
 
   updateAnimations() {
-    const [ animating, weights, scene, sitting ] = [
-       this.animating, this.weights, this.screen.scene, this.sitting
+    const [ animating, weights, scene, sitting, posing ] = [
+       this.animating, this.weights, this.screen.scene, this.sitting, this.posing
     ]
 
     const speed = 4
@@ -270,23 +313,45 @@ export class PlayerController {
         weights.sitting -= scene.deltaTime / 1000 * speed * 1.5
       }
 
-      if (!(animating || sitting) && weights.idle < 1) {
+      if (posing && weights.pose < 1) {
+        weights.pose += scene.deltaTime / 1000 * speed
+      } else if (!posing && weights.pose > 0) {
+        weights.pose -= scene.deltaTime / 1000 * speed * 1.5
+      }
+
+      if (!(animating || sitting || posing) && weights.idle < 1) {
         weights.idle += scene.deltaTime / 1000 * speed
-      } else if ((animating || sitting) && weights.idle > 0) {
+      } else if ((animating || sitting || posing) && weights.idle > 0) {
         weights.idle -= scene.deltaTime / 1000 * speed * 1.5
       }
 
       weights.walking = Math.min(1, Math.max(0, weights.walking))
       weights.sitting = Math.min(1, Math.max(0, weights.sitting))
       weights.idle = Math.min(1, Math.max(0, weights.idle))
+      weights.pose = Math.min(1, Math.max(0, weights.pose))
     }
 
     const walkAnim = this.screen.scene.getAnimationGroupByName('Walking')
     const idleAnim = this.screen.scene.getAnimationGroupByName('Idle')
     const sittingAnim = this.screen.scene.getAnimationGroupByName('Sitting')
+    const poseAnim = this.screen.scene.getAnimationGroupByName('Pose')
     walkAnim?.setWeightForAllAnimatables(weights.walking)
     sittingAnim?.setWeightForAllAnimatables(weights.sitting)
     idleAnim?.setWeightForAllAnimatables(weights.idle)
+    poseAnim?.setWeightForAllAnimatables(weights.pose)
+
+    if (this.smile !== this.smileTarget) {
+      this.smile += 0.005 * this.screen.scene.deltaTime * (this.smile < this.smileTarget ? 1 : -1)
+      this.smile = Scalar.Clamp(this.smile, 0, 1)
+    }
+
+    if (this.smileMorph && this.smileMorphLips) {
+      const smileEase = new PowerEase(2)
+      smileEase.setEasingMode(EasingFunction.EASINGMODE_EASEIN)
+      const influence = smileEase.ease(this.smile)
+      this.smileMorph.influence = influence
+      this.smileMorphLips.influence = influence
+      }
   }
 
   updateCamera() {
