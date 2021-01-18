@@ -118,13 +118,13 @@ export class GameScreen implements Screen {
     this.ambientLight = new HemisphericLight('ambientLight', this.light.direction.clone(), this.scene)
     this.ambientLight.intensity = .2
 
-    this.shadowGenerator = new CascadedShadowGenerator(512, this.light)
-    this.shadowGenerator.lambda = .99
+    this.shadowGenerator = new CascadedShadowGenerator(512+256, this.light)
+    this.shadowGenerator.lambda = .992
     this.shadowGenerator.transparencyShadow = true
     this.shadowGenerator.enableSoftTransparentShadow = true
     this.shadowGenerator.bias = .001
     this.shadowGenerator.normalBias = .02
-    this.shadowGenerator.setDarkness(0.667)
+    this.shadowGenerator.setDarkness(0.5)
     this.shadowGenerator.stabilizeCascades = true
     this.shadowGenerator.splitFrustum()
 

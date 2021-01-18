@@ -67,9 +67,11 @@ export class WorldController {
             clone.scaling = instance.scaling
             clone.material = treeMat
             instance.dispose()
+            shadowGenerator.addShadowCaster(clone)
           } else {
             (mesh as Mesh).receiveShadows = true;
             (mesh as Mesh).material = treeMat
+            shadowGenerator.addShadowCaster(mesh as Mesh)
           }
         }
       })

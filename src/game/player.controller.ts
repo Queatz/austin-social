@@ -101,7 +101,11 @@ export class PlayerController {
       human.material = this.humanMaterial
 
       this.activeApparelMesh = meshes.find(x => x.name === 'Dress')
-      this.hairMesh = meshes.find(x => x.name === 'Short Hair')
+      this.hairMesh = meshes.find(x => x.name === 'Short Hair') || meshes.find(x => x.name === 'Hair')
+      this.activeApparelMesh!.isVisible = false
+
+      this.activeApparelMesh!.receiveShadows = true
+      this.hairMesh!.receiveShadows = true
 
       if (this.activeApparelColor) {
         this.setActiveApparelColor(this.activeApparelColor)
