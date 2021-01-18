@@ -1,4 +1,4 @@
-import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FreeCamera, HemisphericLight, Mesh, Quaternion, Scene, ShaderMaterial, StandardMaterial, Texture, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
+import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FollowCameraMouseWheelInput, FollowCameraPointersInput, FreeCamera, HemisphericLight, Mesh, Quaternion, Scene, ShaderMaterial, StandardMaterial, Texture, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
 import { GameController } from '../game.controller'
 import { InputController } from '../input.controller'
 import { getSkyMaterial } from '../materials/sky.material'
@@ -63,6 +63,9 @@ export class GameScreen implements Screen {
     this.camera.rotationOffset = 180
     this.camera.fov = .6
     this.camera.maxZ = 10000
+    ;(this.camera.inputs.attached['mousewheel'] as FollowCameraMouseWheelInput).wheelPrecision = 1
+    ;(this.camera.inputs.attached['pointers'] as FollowCameraPointersInput).angularSensibilityX = 2
+    ;(this.camera.inputs.attached['pointers'] as FollowCameraPointersInput).angularSensibilityY = 2
 
     this.pipeline = new DefaultRenderingPipeline('defaultPipeline', true, this.scene, [ this.camera ])
     this.pipeline.samples = 4

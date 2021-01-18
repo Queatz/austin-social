@@ -10,6 +10,15 @@ Austin Adventure
 Austin Love Story
 
 
+Today
+=====
+
+ [ ] Switch dress / bra / none
+ [ ] Switch long / short hair
+ [ ] Say modal, remove prompt
+ [ ] Face Type
+ [ ] Button anchoring
+
 Screens
 ==============
 

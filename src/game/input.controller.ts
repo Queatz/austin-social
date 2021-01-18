@@ -3,6 +3,8 @@ import { ActionManager, ExecuteCodeAction, Scene } from '@babylonjs/core'
 export class InputController {
   
   private inputMap: any = {}
+  
+  isEnabled = true
 
   constructor(scene: Scene) {
     scene.actionManager = new ActionManager(scene)
@@ -15,6 +17,17 @@ export class InputController {
   }
 
   pressed(key: string): boolean {
+    if (!this.isEnabled) return false
+
     return this.inputMap[key]
+  }
+  
+  single(key: string): boolean {
+    if (!this.isEnabled) return false
+
+    const pressed = this.inputMap[key]
+    this.inputMap[key] = false
+
+    return pressed
   }
 }

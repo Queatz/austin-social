@@ -5,6 +5,12 @@ import { OverlayController } from './overlay.controller'
 import { WaterController } from './water.controller'
 import { WorldController } from './world.controller'
 
+class Morphie {
+  value = 0
+  target = 0
+  targets = new Array<MorphTarget>()
+}
+
 export class PlayerController {
   skinToneIndex = 0
   skinTones = [
@@ -45,16 +51,16 @@ export class PlayerController {
 
   animationGroups = {} as { [key: string]: AnimationGroup }
 
-  smile = 0
-  smileTarget = 0
+  morphNames = [ 'Boob', 'Boob2', 'Male', 'Male2' ]
+  activeMorph = this.morphNames[0]
+  activeMorphInitialInfluence = 0
+  morphs = {} as { [key: string]: Morphie }
 
   cameraTargetMesh?: Mesh
   cameraTarget?: Mesh
 
   humanScale = .480304
   heroSize = .5
-  smileMorph?: MorphTarget
-  smileMorphLips?: MorphTarget
   humanMaterial!: PBRMaterial
   playerNameMesh?: Mesh
   activeApparelMesh?: AbstractMesh
@@ -94,17 +100,22 @@ export class PlayerController {
       this.humanMaterial.albedoColor = Color3.FromHexString(this.skinTones[this.skinToneIndex]).toLinearSpace()
       this.humanMaterial.metallic = 0
       this.humanMaterial.roughness = .7
-      this.humanMaterial.directIntensity = 1.6
+      this.humanMaterial.directIntensity = 2.6
       this.humanMaterial.clearCoat.isEnabled = true
       this.humanMaterial.clearCoat.intensity = .2
       this.humanMaterial.clearCoat.roughness = .4
       human.material = this.humanMaterial
 
-      this.activeApparelMesh = meshes.find(x => x.name === 'Dress')
+      this.activeApparelMesh = meshes.find(x => x.name === 'Bra') || meshes.find(x => x.name === 'Dress')
       this.hairMesh = meshes.find(x => x.name === 'Short Hair') || meshes.find(x => x.name === 'Hair')
-      this.activeApparelMesh!.isVisible = false
 
-      this.activeApparelMesh!.receiveShadows = true
+      if (this.activeApparelMesh) {
+        this.activeApparelMesh!.receiveShadows = true
+        ;(this.activeApparelMesh!.material as PBRMaterial).sheen.isEnabled = true
+        ;(this.activeApparelMesh!.material as PBRMaterial).sheen.roughness = .05
+        ;(this.activeApparelMesh!.material as PBRMaterial).sheen.intensity = .5
+      }
+
       this.hairMesh!.receiveShadows = true
 
       if (this.activeApparelColor) {
@@ -138,9 +149,39 @@ export class PlayerController {
         })
       })
 
-      const morphTargetIndex = 4
-      this.smileMorph = human.morphTargetManager!.getTarget(morphTargetIndex)
-      this.smileMorphLips = (meshes.find(x => x.name === 'Human_primitive1') as Mesh).morphTargetManager!.getTarget(morphTargetIndex)
+      human.morphTargetManager!.enableUVMorphing = false
+      human.morphTargetManager!.enableNormalMorphing = false
+      human.morphTargetManager!.enableTangentMorphing = false
+
+      if (this.attachToCamera) for(let idx = 0; idx < (human.morphTargetManager?.numTargets || 0); idx++) {
+        const target = human.morphTargetManager!.getTarget(idx)
+
+        if (target.name === 'Face.Asian') {
+          target.influence = 1
+        }
+      }
+
+      this.morphNames.forEach(morphName => {
+        this.morphs[morphName] = new Morphie()
+
+        ;[
+          human as Mesh,
+          meshes.find(x => x.name === 'Human_primitive1') as Mesh,
+          this.activeApparelMesh as Mesh
+        ].forEach(mesh => {
+          for(let idx = 0; idx < (mesh.morphTargetManager?.numTargets || 0); idx++) {
+            const target = mesh.morphTargetManager!.getTarget(idx)
+  
+            if (target.name === morphName) {
+              this.morphs[morphName].targets.push(target)
+
+              if (this.activeMorph === target.name && this.activeMorphInitialInfluence > 0) {
+                this.morphs[morphName].target = this.morphs[morphName].value = this.activeMorphInitialInfluence
+              }
+            }
+          }
+        })
+      })
 
       this.animationGroups['walk'] = animationGroups.find(x => x.name === 'Walking')!
       this.animationGroups['idle'] = animationGroups.find(x => x.name === 'Idle')!
@@ -254,6 +295,27 @@ export class PlayerController {
     this.humanMaterial.albedoColor = Color3.FromHexString(this.skinTones[this.skinToneIndex]).toLinearSpace()
   }
 
+  toggleBodyType() {
+    if (this.morphs[this.activeMorph]?.value === 0) {
+      this.morphs[this.activeMorph]!.target = 1
+    } else if (this.morphs[this.activeMorph]?.value === 1) {
+      this.morphs[this.activeMorph]!.target = 0
+
+      if (this.activeMorph === 'Male2') {
+        this.activeMorph = 'Boob';
+      } else if (this.activeMorph === 'Male') {
+        this.activeMorph = 'Male2';
+        this.morphs[this.activeMorph]!.target = 1
+      } else if (this.activeMorph === 'Boob2') {
+        this.activeMorph = 'Male';
+        this.morphs[this.activeMorph]!.target = 1
+      } else if (this.activeMorph === 'Boob') {
+        this.activeMorph = 'Boob2';
+        this.morphs[this.activeMorph]!.target = 1
+      }
+    }
+  }
+
   setPlayerName(playerName: string) {
     this.playerName = playerName
 
@@ -301,11 +363,13 @@ export class PlayerController {
           didPose = true
       }
       if (this.input.pressed('t')) {
-        if (this.smile === 0) {
-          this.smileTarget = 1
-        } else if (this.smile === 1) {
-          this.smileTarget = 0
+        // If not any are animating...
+        if (!Object.values(this.morphs).map(x => x.value !== 1 && x.value !== 0).reduce((a, b) => a || b)) {
+          this.toggleBodyType()
         }
+      }
+      if (this.input.single('y')) {
+        this.activeApparelMesh!.isVisible = !this.activeApparelMesh!.isVisible
       }
     }
 
@@ -317,19 +381,24 @@ export class PlayerController {
         this.walkingSound.loop = true
         this.walkingSound.play()
       }
-        if (this.sitting) {
-          this.sitting = false
 
-          if (this.attachToCamera) {
-            Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .6, 0, fovEase)
-            this.shadowGenerator.splitFrustum()
-          }
-        }
+      if (this.posing) {
+        this.posing = false
+      }
 
-        if (!this.animating) {
-          this.animating = true
-          this.animationGroups['walk']?.start(true, 1, this.animationGroups['walk'].from, this.animationGroups['walk'].to, false)
+      if (this.sitting) {
+        this.sitting = false
+
+        if (this.attachToCamera) {
+          Animation.CreateAndStartAnimation('fov anim', this.camera, 'fov', 60, 30, this.camera.fov, .6, 0, fovEase)
+          this.shadowGenerator.splitFrustum()
         }
+      }
+
+      if (!this.animating) {
+        this.animating = true
+        this.animationGroups['walk']?.start(true, 1, this.animationGroups['walk'].from, this.animationGroups['walk'].to, false)
+      }
     }
     else {
       if (this.walkingSound.isPlaying) {
@@ -456,18 +525,20 @@ export class PlayerController {
     this.animationGroups['idle']?.setWeightForAllAnimatables(weights.idle)
     this.animationGroups['pose']?.setWeightForAllAnimatables(weights.pose)
 
-    if (this.smile !== this.smileTarget) {
-      this.smile += 0.005 * this.scene.deltaTime * (this.smile < this.smileTarget ? 1 : -1)
-      this.smile = Scalar.Clamp(this.smile, 0, 1)
-    }
-
-    if (this.smileMorph && this.smileMorphLips) {
+    Object.values(this.morphs).forEach(morphie => {
+      if (morphie.value !== morphie.target) {
+        morphie.value += 0.005 * this.scene.deltaTime * (morphie.value < morphie.target ? 1 : -1)
+        morphie.value = Scalar.Clamp(morphie.value, 0, 1)
+      }
+  
       const smileEase = new PowerEase(2)
       smileEase.setEasingMode(EasingFunction.EASINGMODE_EASEIN)
-      const influence = smileEase.ease(this.smile)
-      this.smileMorph.influence = influence
-      this.smileMorphLips.influence = influence
-      }
+      const influence = smileEase.ease(morphie.value)
+
+      morphie.targets.forEach(morph => {
+        morph.influence = influence
+      })
+    })
   }
 
   updateCamera() {

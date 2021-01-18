@@ -1,5 +1,5 @@
-import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FreeCamera, HemisphericLight, Mesh, Scene, Vector3 } from '@babylonjs/core'
-import { AdvancedDynamicTexture, Button, ColorPicker, Control, Image, InputText, Rectangle } from '@babylonjs/gui'
+import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FollowCameraMouseWheelInput, FollowCameraPointersInput, FreeCamera, HemisphericLight, Mesh, Scene, Vector3 } from '@babylonjs/core'
+import { AdvancedDynamicTexture, Button, ColorPicker, Control, Image, InputText, Rectangle, TextBlock } from '@babylonjs/gui'
 import { GameController } from '../game.controller'
 import { InputController } from '../input.controller'
 import { Screen } from '../models'
@@ -59,6 +59,9 @@ export class CharacterCreatorScreen implements Screen {
     this.camera.rotationOffset = 45
     this.camera.fov = .6
     this.camera.maxZ = 10000
+    ;(this.camera.inputs.attached['mousewheel'] as FollowCameraMouseWheelInput).wheelPrecision = 1
+    ;(this.camera.inputs.attached['pointers'] as FollowCameraPointersInput).angularSensibilityX = 2
+    ;(this.camera.inputs.attached['pointers'] as FollowCameraPointersInput).angularSensibilityY = 2
     
     this.pipeline = new DefaultRenderingPipeline('defaultPipeline', true, this.scene, [ this.camera ])
     this.pipeline.samples = 4
@@ -137,6 +140,8 @@ export class CharacterCreatorScreen implements Screen {
       gameScreen.player.playerName = this.player.playerName
       gameScreen.player.activeApparelColor = this.player.getActiveApparelColor()
       gameScreen.player.hairColor = this.player.getHairColor()
+      gameScreen.player.activeMorph = this.player.activeMorph
+      gameScreen.player.activeMorphInitialInfluence = this.player.morphs[this.player.activeMorph]?.target || 0
       this.game.screen.show(gameScreen)
     }).top = advancedTexture.getSize().height / 2 - 40
     
@@ -144,13 +149,20 @@ export class CharacterCreatorScreen implements Screen {
       this.player.toggleSkinTone()
     }).left = advancedTexture.getSize().width / 2 - 120
 
+    const b = this.addButton(advancedTexture, 'Body Type', () => {
+      this.player.toggleBodyType()
+    })
+    b.left = advancedTexture.getSize().width / 2 - 120
+    b.top = '-60px'
+
     const rInput = new Rectangle('rInput')
     rInput.width = '200px'
     rInput.height = '50px'
     rInput.thickness = 1
     rInput.color = 'black'
     rInput.cornerRadius = 15
-    rInput.top = -advancedTexture.getSize().height / 2 + 40
+    rInput.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP
+    rInput.top = '40px'
 
     const input = new InputText()
     input.height = 1
@@ -159,8 +171,6 @@ export class CharacterCreatorScreen implements Screen {
     input.color = 'white'
     input.thickness = 0
     input.autoStretchWidth = false
-    input.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER
-    input.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER
     input.isPointerBlocker = true
     input.background = 'rgba(255, 255, 255, .125)'
     input.focusedBackground = 'rgba(255, 255, 255, .25)'
@@ -180,7 +190,7 @@ export class CharacterCreatorScreen implements Screen {
     picker.left = '-20px'
     picker.top = '150px'
     picker.onValueChangedObservable.add(value => {
-        this.player.setActiveApparelColor(value)
+        this.player.setActiveApparelColor(value.toLinearSpace())
     })
 
     advancedTexture.addControl(picker)
@@ -193,10 +203,38 @@ export class CharacterCreatorScreen implements Screen {
     picker.left = '-20px'
     picker.top = '300px'
     picker.onValueChangedObservable.add(value => {
-        this.player.setHairColor(value)
+        this.player.setHairColor(value.toLinearSpace())
     })
 
     advancedTexture.addControl(picker)
+
+    advancedTexture.onControlPickedObservable.add(control => {
+      if (control.isPointerBlocker) {
+          this.camera.detachControl()
+          this.input.isEnabled = false
+      }
+    })
+
+    advancedTexture.executeOnAllControls(control => {
+        if (control.isPointerBlocker) {
+          if (control instanceof InputText) {
+            control.onFocusObservable.add(() => {
+              this.camera.detachControl()
+              this.input.isEnabled = false
+            })
+
+            control.onBlurObservable.add(() => {
+              this.camera.attachControl(true)
+              this.input.isEnabled = true
+            })
+          } else {
+            control.onPointerOutObservable.add(() => {
+              this.camera.attachControl(true)
+              this.input.isEnabled = true
+            })
+          }
+        } 
+    })
   }
 
   private addButton(advancedTexture: AdvancedDynamicTexture, text: string, callback: () => void) {
