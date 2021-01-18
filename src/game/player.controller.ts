@@ -16,6 +16,8 @@ export class PlayerController {
     '#F4BAB8',
     '#FFC6C0',
   ]
+  activeApparelColor?: Color3
+  hairColor?: Color3
 
   playerName = 'Anya of Earth'
 
@@ -55,6 +57,8 @@ export class PlayerController {
   smileMorphLips?: MorphTarget
   humanMaterial!: PBRMaterial
   playerNameMesh?: Mesh
+  activeApparelMesh?: AbstractMesh
+  hairMesh: AbstractMesh | undefined
 
   constructor(
     private scene: Scene,
@@ -67,7 +71,8 @@ export class PlayerController {
     private world: WorldController,
     private input?: InputController,
     private startBehind = true,
-    private attachToCamera = true
+    private attachToCamera = true,
+    private showName = true
   ) {
     this.walkingSound = new Sound('sound', 'assets/walk.ogg', scene)
     
@@ -79,6 +84,8 @@ export class PlayerController {
     this.hero.ellipsoid = new Vector3(1, 4, 1)
     this.hero.ellipsoidOffset = new Vector3(0, 4, 0)
     this.hero.isVisible = false
+
+    this.walkingSound.attachToMesh(this.hero)
 
     SceneLoader.ImportMesh('', '/assets/', 'human.glb', scene, (meshes, particleSystems, skeletons, animationGroups) => {
       const human = meshes.find(x => x.name === 'Human_primitive0') as Mesh
@@ -92,6 +99,17 @@ export class PlayerController {
       this.humanMaterial.clearCoat.intensity = .2
       this.humanMaterial.clearCoat.roughness = .4
       human.material = this.humanMaterial
+
+      this.activeApparelMesh = meshes.find(x => x.name === 'Dress')
+      this.hairMesh = meshes.find(x => x.name === 'Short Hair')
+
+      if (this.activeApparelColor) {
+        this.setActiveApparelColor(this.activeApparelColor)
+      }
+
+      if (this.hairColor) {
+        this.setHairColor(this.hairColor)
+      }
 
       const eyeL = meshes.find(x => x.name === 'Eye L') as Mesh
       const eyeR = meshes.find(x => x.name === 'Eyes R') as Mesh
@@ -119,7 +137,6 @@ export class PlayerController {
       const morphTargetIndex = 4
       this.smileMorph = human.morphTargetManager!.getTarget(morphTargetIndex)
       this.smileMorphLips = (meshes.find(x => x.name === 'Human_primitive1') as Mesh).morphTargetManager!.getTarget(morphTargetIndex)
-
 
       this.animationGroups['walk'] = animationGroups.find(x => x.name === 'Walking')!
       this.animationGroups['idle'] = animationGroups.find(x => x.name === 'Idle')!
@@ -206,6 +223,28 @@ export class PlayerController {
     }
   }
 
+  setActiveApparelColor(value: Color3) {
+    this.activeApparelColor = value
+    
+    const mat = this.activeApparelMesh?.material as PBRMaterial
+    mat?.albedoColor?.copyFrom(value)
+  }
+
+  getActiveApparelColor(): Color3 | undefined {
+    return (this.activeApparelMesh?.material as PBRMaterial)?.albedoColor
+  }
+
+  setHairColor(value: Color3) {
+    this.hairColor = value
+    
+    const mat = this.hairMesh?.material as PBRMaterial
+    mat?.albedoColor?.copyFrom(value)
+  }
+
+  getHairColor(): Color3 | undefined {
+    return (this.hairMesh?.material as PBRMaterial)?.albedoColor
+  }
+
   toggleSkinTone() {
     this.skinToneIndex = Scalar.Repeat(this.skinToneIndex + 1, this.skinTones.length)
     this.humanMaterial.albedoColor = Color3.FromHexString(this.skinTones[this.skinToneIndex]).toLinearSpace()
@@ -213,8 +252,11 @@ export class PlayerController {
 
   setPlayerName(playerName: string) {
     this.playerName = playerName
-    this.playerNameMesh?.dispose(false, true)
-    this.playerNameMesh = this.overlay?.text(this.playerName, this.skelHeadBone, this.humanRoot, false)
+
+    if (this.showName) {
+      this.playerNameMesh?.dispose(false, true)
+      this.playerNameMesh = this.overlay?.text(this.playerName, this.skelHeadBone, this.humanRoot, false)
+    }
   }
 
   randomize() {

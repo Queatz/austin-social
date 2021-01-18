@@ -1,5 +1,5 @@
 import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FreeCamera, HemisphericLight, Mesh, Scene, Vector3 } from '@babylonjs/core'
-import { AdvancedDynamicTexture, Button, Control, Image, InputText, Rectangle } from '@babylonjs/gui'
+import { AdvancedDynamicTexture, Button, ColorPicker, Control, Image, InputText, Rectangle } from '@babylonjs/gui'
 import { GameController } from '../game.controller'
 import { InputController } from '../input.controller'
 import { Screen } from '../models'
@@ -116,6 +116,8 @@ export class CharacterCreatorScreen implements Screen {
       this.water,
       this.world,
       this.input,
+      false,
+      true,
       false
     )
 
@@ -133,6 +135,8 @@ export class CharacterCreatorScreen implements Screen {
       const gameScreen = new GameScreen(this.game)
       gameScreen.player.skinToneIndex = this.player.skinToneIndex
       gameScreen.player.playerName = this.player.playerName
+      gameScreen.player.activeApparelColor = this.player.getActiveApparelColor()
+      gameScreen.player.hairColor = this.player.getHairColor()
       this.game.screen.show(gameScreen)
     }).top = advancedTexture.getSize().height / 2 - 40
     
@@ -167,6 +171,32 @@ export class CharacterCreatorScreen implements Screen {
 
     advancedTexture.addControl(rInput)
     rInput.addControl(input)
+
+    var picker = new ColorPicker()
+    picker.value = new Color3()
+    picker.height = '150px'
+    picker.width = '150px'
+    picker.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT
+    picker.left = '-20px'
+    picker.top = '150px'
+    picker.onValueChangedObservable.add(value => {
+        this.player.setActiveApparelColor(value)
+    })
+
+    advancedTexture.addControl(picker)
+
+    var picker = new ColorPicker()
+    picker.value = new Color3()
+    picker.height = '150px'
+    picker.width = '150px'
+    picker.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT
+    picker.left = '-20px'
+    picker.top = '300px'
+    picker.onValueChangedObservable.add(value => {
+        this.player.setHairColor(value)
+    })
+
+    advancedTexture.addControl(picker)
   }
 
   private addButton(advancedTexture: AdvancedDynamicTexture, text: string, callback: () => void) {
