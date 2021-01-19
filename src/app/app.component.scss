@@ -9,3 +9,19 @@ canvas {
     margin: 0;
     padding: 0;
 }
+
+input {
+    width: 24rem;
+    background: white;
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 1rem;
+    border: none;
+    box-shadow: 0 0 0.5rem rgba(0, 0, 0, .5);
+    outline: none;
+    padding: 1rem;
+    font-size: 20px;
+}

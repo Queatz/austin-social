@@ -134,7 +134,7 @@ export class CharacterCreatorScreen implements Screen {
   setupUI(overlayScene: Scene) {
     const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI('UI', true, overlayScene)
 
-    this.addButton(advancedTexture, 'Start Playing', () => {
+    const startButton = this.addButton(advancedTexture, 'Start Playing', () => {
       const gameScreen = new GameScreen(this.game)
       gameScreen.player.skinToneIndex = this.player.skinToneIndex
       gameScreen.player.playerName = this.player.playerName
@@ -142,18 +142,45 @@ export class CharacterCreatorScreen implements Screen {
       gameScreen.player.hairColor = this.player.getHairColor()
       gameScreen.player.activeMorph = this.player.activeMorph
       gameScreen.player.activeMorphInitialInfluence = this.player.morphs[this.player.activeMorph]?.target || 0
+      gameScreen.player.playerConfig = this.player.playerConfig
       this.game.screen.show(gameScreen)
-    }).top = advancedTexture.getSize().height / 2 - 40
+    })
+    startButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM
+    startButton.top = '-20px'
     
-    this.addButton(advancedTexture, 'Skin Tone', () => {
+    const b2 = this.addButton(advancedTexture, 'Skin Tone', () => {
       this.player.toggleSkinTone()
-    }).left = advancedTexture.getSize().width / 2 - 120
+    })
+    b2.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT
+    b2.left = '-20px'
 
     const b = this.addButton(advancedTexture, 'Body Type', () => {
       this.player.toggleBodyType()
     })
-    b.left = advancedTexture.getSize().width / 2 - 120
+    b.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT
+    b.left = '-20px'
     b.top = '-60px'
+
+    const b3 = this.addButton(advancedTexture, 'Apparel', () => {
+      this.player.toggleApparel()
+    })
+    b3.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT
+    b3.left = '-20px'
+    b3.top = '-120px'
+
+    const b4 = this.addButton(advancedTexture, 'Hair', () => {
+      this.player.toggleHair()
+    })
+    b4.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT
+    b4.left = '-20px'
+    b4.top = '-180px'
+
+    const b5 = this.addButton(advancedTexture, 'Face', () => {
+      this.player.toggleFace()
+    })
+    b5.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT
+    b5.left = '-20px'
+    b5.top = '-240px'
 
     const rInput = new Rectangle('rInput')
     rInput.width = '200px'

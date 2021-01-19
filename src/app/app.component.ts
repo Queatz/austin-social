@@ -14,19 +14,42 @@ export class AppComponent implements OnInit {
   @ViewChild('renderCanvas', { static: true, read: ElementRef })
   renderCanvas!: ElementRef
 
+  @ViewChild('sayInput', { static: true, read: ElementRef })
+  sayInput!: ElementRef
+
+  showSay = false
+
   say = new Subject<string>()
   game!: GameController
 
+  @HostListener('window:keydown.esc')
+  talkEsc() {
+    if (this.showSay) {
+      this.showSay = false
+      this.renderCanvas.nativeElement.focus()
+    }
+  }
+
   @HostListener('window:keydown.enter')
   talk(): void {
-    const result = prompt('hey')
+    this.showSay = !this.showSay
     
-    if (result) {
-      this.say.next(result)
+    if (this.showSay) {
+      setTimeout(() => {
+        this.sayInput.nativeElement.focus()
+      })
+    } else {
+      if (this.sayInput.nativeElement.value) {
+        this.say.next(this.sayInput.nativeElement.value)
+        this.sayInput.nativeElement.value = ''
+        this.renderCanvas.nativeElement.focus()
+      }
     }
   }
 
   ngOnInit(): void {
+    this.renderCanvas.nativeElement.focus()
+    
     this.game = new GameController(this.say, this.renderCanvas.nativeElement)
     this.game.start()
 

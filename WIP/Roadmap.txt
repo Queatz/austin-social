@@ -13,11 +13,11 @@ Austin Love Story
 Today
 =====
 
- [ ] Switch dress / bra / none
- [ ] Switch long / short hair
- [ ] Say modal, remove prompt
- [ ] Face Type
- [ ] Button anchoring
+ - Switch dress / bra / none
+ - Switch long / short hair
+ - Say modal, remove prompt
+ - Face Type
+ - Fixbutton anchoring
 
 Screens
 ==============

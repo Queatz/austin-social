@@ -1,4 +1,4 @@
-import { AbstractMesh, Animation, CascadedShadowGenerator, Color3, DeepImmutableObject, EasingFunction, FollowCamera, Mesh, MeshBuilder, MorphTarget, PBRMaterial, PowerEase, Ray, Scalar, Scene, SceneLoader, Sound, DefaultRenderingPipeline, Vector3, Bone, AnimationGroup } from '@babylonjs/core'
+import { AbstractMesh, Animation, CascadedShadowGenerator, Color3, DeepImmutableObject, EasingFunction, FollowCamera, Mesh, MeshBuilder, MorphTarget, PBRMaterial, PowerEase, Ray, Scalar, Scene, SceneLoader, Sound, DefaultRenderingPipeline, Vector3, Bone, AnimationGroup, Texture, Space, Matrix, Quaternion, Vector2 } from '@babylonjs/core'
 import { Observable } from 'rxjs'
 import { InputController } from './input.controller'
 import { OverlayController } from './overlay.controller'
@@ -27,10 +27,16 @@ export class PlayerController {
 
   playerName = 'Anya of Earth'
 
+  playerConfig = {
+    hairName: 'hair1',
+    apparelName: 'bra1',
+    faceName: ''
+  }
+
   sitting = false
   posing = false
-  hero: Mesh
 
+  hero: Mesh
   humanRoot!: Mesh
   skelHeadBone!: Bone
 
@@ -63,8 +69,10 @@ export class PlayerController {
   heroSize = .5
   humanMaterial!: PBRMaterial
   playerNameMesh?: Mesh
-  activeApparelMesh?: AbstractMesh
-  hairMesh: AbstractMesh | undefined
+  activeApparelMesh?: Mesh
+  hairMesh?: Mesh
+  humanMesh?: Mesh
+  armature?: Mesh
 
   constructor(
     private scene: Scene,
@@ -94,7 +102,7 @@ export class PlayerController {
     this.walkingSound.attachToMesh(this.hero)
 
     SceneLoader.ImportMesh('', '/assets/', 'human.glb', scene, (meshes, particleSystems, skeletons, animationGroups) => {
-      const human = meshes.find(x => x.name === 'Human_primitive0') as Mesh
+      const human = this.humanMesh = meshes.find(x => x.name === 'Human_primitive0') as Mesh
 
       this.humanMaterial = new PBRMaterial('pbr', scene)
       this.humanMaterial.albedoColor = Color3.FromHexString(this.skinTones[this.skinToneIndex]).toLinearSpace()
@@ -105,26 +113,6 @@ export class PlayerController {
       this.humanMaterial.clearCoat.intensity = .2
       this.humanMaterial.clearCoat.roughness = .4
       human.material = this.humanMaterial
-
-      this.activeApparelMesh = meshes.find(x => x.name === 'Bra') || meshes.find(x => x.name === 'Dress')
-      this.hairMesh = meshes.find(x => x.name === 'Short Hair') || meshes.find(x => x.name === 'Hair')
-
-      if (this.activeApparelMesh) {
-        this.activeApparelMesh!.receiveShadows = true
-        ;(this.activeApparelMesh!.material as PBRMaterial).sheen.isEnabled = true
-        ;(this.activeApparelMesh!.material as PBRMaterial).sheen.roughness = .05
-        ;(this.activeApparelMesh!.material as PBRMaterial).sheen.intensity = .5
-      }
-
-      this.hairMesh!.receiveShadows = true
-
-      if (this.activeApparelColor) {
-        this.setActiveApparelColor(this.activeApparelColor)
-      }
-
-      if (this.hairColor) {
-        this.setHairColor(this.hairColor)
-      }
 
       const eyeL = meshes.find(x => x.name === 'Eye L') as Mesh
       const eyeR = meshes.find(x => x.name === 'Eyes R') as Mesh
@@ -149,39 +137,12 @@ export class PlayerController {
         })
       })
 
-      human.morphTargetManager!.enableUVMorphing = false
-      human.morphTargetManager!.enableNormalMorphing = false
-      human.morphTargetManager!.enableTangentMorphing = false
+      // human.morphTargetManager!.enableUVMorphing = false
+      // human.morphTargetManager!.enableNormalMorphing = false
+      // human.morphTargetManager!.enableTangentMorphing = false
 
-      if (this.attachToCamera) for(let idx = 0; idx < (human.morphTargetManager?.numTargets || 0); idx++) {
-        const target = human.morphTargetManager!.getTarget(idx)
-
-        if (target.name === 'Face.Asian') {
-          target.influence = 1
-        }
-      }
-
-      this.morphNames.forEach(morphName => {
-        this.morphs[morphName] = new Morphie()
-
-        ;[
-          human as Mesh,
-          meshes.find(x => x.name === 'Human_primitive1') as Mesh,
-          this.activeApparelMesh as Mesh
-        ].forEach(mesh => {
-          for(let idx = 0; idx < (mesh.morphTargetManager?.numTargets || 0); idx++) {
-            const target = mesh.morphTargetManager!.getTarget(idx)
-  
-            if (target.name === morphName) {
-              this.morphs[morphName].targets.push(target)
-
-              if (this.activeMorph === target.name && this.activeMorphInitialInfluence > 0) {
-                this.morphs[morphName].target = this.morphs[morphName].value = this.activeMorphInitialInfluence
-              }
-            }
-          }
-        })
-      })
+      this.addMorphieMesh(human)
+      this.addMorphieMesh(meshes.find(x => x.name === 'Human_primitive1') as Mesh)
 
       this.animationGroups['walk'] = animationGroups.find(x => x.name === 'Walking')!
       this.animationGroups['idle'] = animationGroups.find(x => x.name === 'Idle')!
@@ -205,58 +166,37 @@ export class PlayerController {
 
       this.humanRoot.parent = this.hero
       this.humanRoot.position.copyFrom(new Vector3(0, .84, 0))
-
       this.humanRoot.scaling.scaleInPlace(this.humanScale)
+
+      this.armature = meshes.find(x => x.name === 'Armature') as Mesh
 
       human.receiveShadows = true
       shadowGenerator.addShadowCaster(human)
 
       const skel = human.skeleton!
-      const head = skel.bones[skel.getBoneIndexByName('Head')]
       this.skelHeadBone = skel.bones[skel.getBoneIndexByName('Head')]
 
       this.setPlayerName(this.playerName)
 
-      sayObservable?.subscribe(say => {
-        overlay?.text(say, this.skelHeadBone, this.humanRoot, true)
-      })  
+      if (this.attachToCamera) {
+        sayObservable?.subscribe(say => {
+          overlay?.text(say, this.skelHeadBone, this.humanRoot, true)
+        })
+      }
 
-      // Character Customization
+      // Apparel + Style
 
-      // SceneLoader.ImportMesh('', '/assets/', 'hairs-short.glb', scene, hairz => {
-      //   hairz[1].attachToBone(head, humanRoot)
-      //   hairz[1].position = new Vector3(0, .3, -.1)
-      //   hairz[1].rotation = new Vector3(-Math.PI / 12, 0, 0)
+      if (this.playerConfig.apparelName) {
+        this.setApparel(this.playerConfig.apparelName)
+      }
 
-      //   const hairMat = new PBRMaterial('hair', scene)
-      //   hairMat.albedoColor = Color3.FromHexString('#1A0C09').toLinearSpace().scale(3)
-      //   hairMat.roughness = .4
-      //   hairMat.metallic = .2
-      //   hairMat.sheen.isEnabled = true
-      //   hairMat.sheen.linkSheenWithAlbedo = true
-      //   hairMat.anisotropy.isEnabled = true
-      //   hairMat.anisotropy.intensity = .8
-      //   hairMat.backFaceCulling = false
-      //   hairz[1].material = hairMat
+      if (this.playerConfig.hairName) {
+        this.setHair(this.playerConfig.hairName)
+      }
 
-      //   hairz[1].receiveShadows = true
-      //   shadowGenerator.addShadowCaster(hairz[1])
-      // })
-
-      // Character Customization
-
-      // SceneLoader.ImportMesh('', '/assets/', 'eyes.glb', scene, hairz => {
-      //   const skel = human.skeleton!
-      //   const head = skel.bones[skel.getBoneIndexByName('Head')]
-      //   hairz[1].attachToBone(head, humanRoot)
-      //   hairz[2].attachToBone(head, humanRoot)
-      //   hairz[1].position = new Vector3(0.068, -0.234956, 0.05)
-      //   hairz[1].rotation = new Vector3(-Math.PI / 2 - 0.24, 0.2, 0)
-      //   hairz[2].position = new Vector3(-0.068, -0.234956, 0.05)
-      //   hairz[2].rotation = new Vector3(-Math.PI / 2 - 0.24, -0.2, 0)
-
-      //   this.cameraTargetMesh = Eye L_primitive0
-      // })
+      if (this.playerConfig.faceName) {
+        this.setFace(this.playerConfig.faceName)
+      }
     })
 
     // Fix jittery camera when player is animating
@@ -266,6 +206,46 @@ export class PlayerController {
         this.updateCamera();
       })
     }
+  }
+
+  addMorphieMesh(mesh: Mesh) {
+    this.morphNames.forEach(morphName => {
+      if (!(morphName in this.morphs)) {
+        this.morphs[morphName] = new Morphie()
+      }
+
+      for(let idx = 0; idx < (mesh.morphTargetManager?.numTargets || 0); idx++) {
+        const target = mesh.morphTargetManager!.getTarget(idx)
+
+        if (target.name === morphName) {
+          this.morphs[morphName].targets.push(target)
+
+          if (this.activeMorph === target.name && this.activeMorphInitialInfluence > 0) {
+            this.morphs[morphName].target = this.morphs[morphName].value = this.activeMorphInitialInfluence
+          }
+        }
+      }
+    })
+  }
+
+  removeMorphieMesh(mesh: Mesh) {
+    this.morphNames.forEach(morphName => {
+      // if (morphName in this.morphs) {
+      //   this.morphs[morphName].targets = this.morphs[morphName].targets.filter(x => mesh.morphTargetManager?.getActiveTarget)
+      // }
+
+      // for(let idx = 0; idx < (mesh.morphTargetManager?.numTargets || 0); idx++) {
+      //   const target = mesh.morphTargetManager!.getTarget(idx)
+
+      //   if (target.name === morphName) {
+      //     this.morphs[morphName].targets.push(target)
+
+      //     if (this.activeMorph === target.name && this.activeMorphInitialInfluence > 0) {
+      //       this.morphs[morphName].target = this.morphs[morphName].value = this.activeMorphInitialInfluence
+      //     }
+      //   }
+      // }
+    })
   }
 
   setActiveApparelColor(value: Color3) {
@@ -313,6 +293,149 @@ export class PlayerController {
         this.activeMorph = 'Boob2';
         this.morphs[this.activeMorph]!.target = 1
       }
+    }
+  }
+
+  toggleFace() {
+    const faces = [
+      '',
+      'Face.Asian'
+    ]
+
+    const idx = faces.indexOf(this.playerConfig.faceName)
+
+    this.setFace(faces[Scalar.Repeat(idx + 1, faces.length)])
+  }
+
+  toggleHair() {
+    const styles = [
+      'hair1',
+      'hair2'
+    ]
+
+    const idx = styles.indexOf(this.playerConfig.hairName)
+
+    this.setHair(styles[Scalar.Repeat(idx + 1, styles.length)])
+  }
+
+  toggleApparel() {
+    const closet = [
+      'bra1',
+      'dress1',
+      'dress2'
+    ]
+
+    const idx = closet.indexOf(this.playerConfig.apparelName)
+
+    this.setApparel(closet[Scalar.Repeat(idx + 1, closet.length)])
+  }
+
+  setFace(name: string) {
+    this.playerConfig.faceName = name
+
+    for(let idx = 0; idx < (this.humanMesh?.morphTargetManager?.numTargets || 0); idx++) {
+      const target = this.humanMesh!.morphTargetManager!.getTarget(idx)
+
+      if (target.name === this.playerConfig.faceName) {
+        target.influence = 1
+      } else if (target.name.startsWith('Face.')) {
+        target.influence = 0
+      }
+    }
+  }
+
+  setHair(name: string) {
+    this.playerConfig.hairName = name
+
+    if (this.hairMesh) {
+      this.hairMesh.dispose()
+      this.removeMorphieMesh(this.hairMesh)
+      this.hairMesh = undefined
+    }
+
+    if (this.humanMesh && this.playerConfig.hairName) {
+      SceneLoader.ImportMesh('', '/assets/', `${this.playerConfig.hairName}.glb`, this.scene, meshes => {
+        const mesh = meshes.find(x => x.name === 'Hair') as Mesh || meshes.find(x => x.name === 'Short Hair') as Mesh
+
+        // Hair is modelled in world space -- attach to bone and negate rest transform of bone
+
+        let temp = this.humanMesh!.skeleton!.clone('temp')
+        temp.returnToRest()
+        let head = temp.bones[temp.getBoneIndexByName('Head')]
+
+        mesh.position.subtractInPlace(head.getAbsoluteTransform().getTranslation())
+        mesh.setPivotPoint(mesh.position.negate())
+        mesh.rotationQuaternion!.copyFrom(Quaternion.FromRotationMatrix(head.getAbsoluteTransform().getRotationMatrix().invert()))
+
+        temp.dispose()
+
+        mesh.attachToBone(this.skelHeadBone, this.humanRoot)
+
+        this.addMorphieMesh(mesh)
+
+        mesh.receiveShadows = true
+        this.shadowGenerator.addShadowCaster(mesh)
+
+        this.hairMesh = mesh
+
+        const material = mesh!.material as PBRMaterial
+
+        material.directIntensity = 2
+        material.metallicReflectanceColor = (mesh!.material as PBRMaterial).albedoColor
+        material.anisotropy.isEnabled = true
+
+        const waterBump = new Texture('assets/waterbump.png', this.scene)
+        waterBump.uScale = 8
+        waterBump.vScale = 1
+        material.bumpTexture = waterBump
+
+        if (this.hairColor) {
+          this.setHairColor(this.hairColor)
+        }
+      })
+    }
+  }
+
+  setApparel(name: string) {
+    this.playerConfig.apparelName = name
+
+    if (this.activeApparelMesh) {
+      this.activeApparelMesh.dispose()
+      this.removeMorphieMesh(this.activeApparelMesh)
+      this.activeApparelMesh = undefined
+    }
+
+    if (this.humanMesh && this.playerConfig.apparelName) {
+      SceneLoader.ImportMesh('', '/assets/', `${this.playerConfig.apparelName}.glb`, this.scene, meshes => {
+        const dress = meshes.find(x => x.name === 'Dress') as Mesh || meshes.find(x => x.name === 'Bra') as Mesh
+
+        dress.parent = this.humanMesh!.parent
+        dress.skeleton = this.humanMesh!.skeleton
+        this.addMorphieMesh(dress)
+
+        dress.receiveShadows = true
+        this.shadowGenerator.addShadowCaster(dress)
+
+        this.activeApparelMesh = dress
+
+        const material = dress!.material as PBRMaterial
+
+        material.directIntensity = 3
+        material.metallicReflectanceColor = (dress!.material as PBRMaterial).albedoColor
+        material.sheen.isEnabled = true
+        material.sheen.roughness = .1
+        material.sheen.linkSheenWithAlbedo = true
+        material.sheen.intensity = 1
+
+        const waterBump = new Texture('assets/waterbump.png', this.scene)
+        waterBump.uScale = 1
+        waterBump.vScale = 16
+        material.bumpTexture = waterBump
+
+        if (this.activeApparelColor) {
+          this.setActiveApparelColor(this.activeApparelColor)
+        }
+      })
     }
   }
 
