@@ -6,18 +6,12 @@ AustinStory
 Austin Life Simulator
 Austin Simulator
 Austin Adventure
-
+Austin Interactive Story
 Austin Love Story
 
 
 Today
 =====
-
- - Switch dress / bra / none
- - Switch long / short hair
- - Say modal, remove prompt
- - Face Type
- - Fixbutton anchoring
 
 Screens
 ==============
@@ -30,7 +24,7 @@ Main Screen
 Character Creator Screen
 	 - 3D Scene
 	 - Character
-	 - Music
+	 - Music	
 	 - Creation tools
 	 - Name
 

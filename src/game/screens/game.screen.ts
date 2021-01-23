@@ -140,7 +140,7 @@ export class GameScreen implements Screen {
     this.water = new WaterController(this.scene)
     this.water.addToRenderList(this.skybox)
 
-    this.world = new WorldController(this.scene, this.shadowGenerator, 'peninsula world.glb')
+    this.world = new WorldController(this.scene, this.water, this.shadowGenerator, 'peninsula world.glb')
 
     this.overlay = new OverlayController(this.overlayScene)
 
@@ -239,7 +239,7 @@ export class GameScreen implements Screen {
 
     this.light.position = this.player.hero.position.clone().subtract(this.light.direction.scale(50))
 
-    let shaderMaterial = this.scene.getMaterialByName('skyCustomShader') as ShaderMaterial
+    let shaderMaterial = this.scene.getMaterialByName('skyShader') as ShaderMaterial
     shaderMaterial.setFloat('time', this.gameTime)
     // shaderMaterial.setFloat('offset', gameTime)
     shaderMaterial.setFloat('suny', this.sunPosition.y)

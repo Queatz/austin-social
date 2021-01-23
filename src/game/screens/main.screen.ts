@@ -20,7 +20,7 @@ export class MainScreen implements Screen {
     image.width = 1
 
     advancedTexture.onBeginLayoutObservable.add(() => {
-      const aspect = ((image as any)._imageWidth / (image as any)._imageHeight) / (advancedTexture.getSize().width / advancedTexture.getSize().height)
+      const aspect = (image.imageWidth / image.imageHeight) / (advancedTexture.getSize().width / advancedTexture.getSize().height)
 
       if (aspect > 1) {
         image.width = aspect

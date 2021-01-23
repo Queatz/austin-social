@@ -182,6 +182,12 @@ export class PlayerController {
         sayObservable?.subscribe(say => {
           overlay?.text(say, this.skelHeadBone, this.humanRoot, true)
         })
+      } else {
+        overlay?.showInteractions('hey, stranger! what can I do for you?', [
+          'Bake me a cake',
+          'Hang on to some items',
+          'Hug me sis!'
+        ], this.skelHeadBone, this.humanRoot, true)
       }
 
       // Apparel + Style
@@ -375,6 +381,7 @@ export class PlayerController {
 
         mesh.receiveShadows = true
         this.shadowGenerator.addShadowCaster(mesh)
+        this.water.addToRenderList(mesh)
 
         this.hairMesh = mesh
 
@@ -415,6 +422,7 @@ export class PlayerController {
 
         dress.receiveShadows = true
         this.shadowGenerator.addShadowCaster(dress)
+        this.water.addToRenderList(dress)
 
         this.activeApparelMesh = dress
 

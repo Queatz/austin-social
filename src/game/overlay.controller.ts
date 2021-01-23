@@ -5,6 +5,10 @@ export class OverlayController {
 
   }
 
+  showInteractions(text: string, options: Array<String>, bone: Bone, hero: AbstractMesh, vanish: boolean): Array<Mesh> {
+    
+  }
+
   text(text: string, bone: Bone, hero: AbstractMesh, vanish: boolean): Mesh {
     var font_size = 48
     var font = 'normal ' + font_size + 'px Arial'

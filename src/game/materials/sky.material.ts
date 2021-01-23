@@ -1,6 +1,6 @@
 import { Effect, Scene, ShaderMaterial, Texture } from '@babylonjs/core';
 
-Effect.ShadersStore['customVertexShader']=  `
+Effect.ShadersStore['skyVertexShader'] = `
 precision highp float;
 
 // Attributes
@@ -26,9 +26,9 @@ void main() {
 		// vUV.y =1.-vUV.y;     // flip uv screen ;
 	gl_Position = worldViewProjection * p;
 
-}`;
+}`
 
-Effect.ShadersStore['customFragmentShader']=  `
+Effect.ShadersStore['skyFragmentShader'] = `
 precision highp float;
 
 uniform mat4 worldView;
@@ -364,26 +364,26 @@ void main() {
 	vec2 sunpos = vec2(sunx,suny);
 	float t = time;
 	gl_FragColor = generate(uv,uv * vec2(2096.0),sunpos,t);
-}`;
+}`
 
 export function getSkyMaterial(scene: Scene): ShaderMaterial {
-	const shaderMaterial = new ShaderMaterial('skyCustomShader', scene, {
-		vertex: 'custom',
-		fragment: 'custom',
+	const shaderMaterial = new ShaderMaterial('skyShader', scene, {
+		vertex: 'sky',
+		fragment: 'sky',
 	}, {
 		attributes: ['position', 'normal', 'uv'],
 		uniforms: ['world', 'worldView', 'worldViewProjection', 'view', 'projection']
-	});
+	})
 
-	const mainTexture = new Texture('/assets/cloud noise.png', scene, true, false, 12);
+	const mainTexture = new Texture('/assets/cloud noise.png', scene, true, false, 12)
 
 	//https://www.shadertoy.com/view/ltlSWB
-	shaderMaterial.setTexture('iChannel0', mainTexture); 
-	shaderMaterial.setFloat('time', 0);
-	shaderMaterial.setFloat('offset', 0);
-	shaderMaterial.setFloat('sunx',0);
-	shaderMaterial.setFloat('suny', 0); 
-	shaderMaterial.backFaceCulling = false;
+	shaderMaterial.setTexture('iChannel0', mainTexture) 
+	shaderMaterial.setFloat('time', 0)
+	shaderMaterial.setFloat('offset', 0)
+	shaderMaterial.setFloat('sunx',0)
+	shaderMaterial.setFloat('suny', 0) 
+	shaderMaterial.backFaceCulling = false
 
-	return shaderMaterial;
+	return shaderMaterial
 }

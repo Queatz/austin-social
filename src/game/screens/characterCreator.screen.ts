@@ -1,5 +1,5 @@
 import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FollowCameraMouseWheelInput, FollowCameraPointersInput, FreeCamera, HemisphericLight, Mesh, Scene, Vector3 } from '@babylonjs/core'
-import { AdvancedDynamicTexture, Button, ColorPicker, Control, Image, InputText, Rectangle, TextBlock } from '@babylonjs/gui'
+import { AdvancedDynamicTexture, Button, ColorPicker, Control, InputText, Rectangle } from '@babylonjs/gui'
 import { GameController } from '../game.controller'
 import { InputController } from '../input.controller'
 import { Screen } from '../models'
@@ -106,9 +106,9 @@ export class CharacterCreatorScreen implements Screen {
     this.input = new InputController(this.scene)
     this.overlay = new OverlayController(this.overlayScene)
 
-    this.world = new WorldController(this.scene, this.shadowGenerator, 'peninsula world.glb')
-    
     this.water = new WaterController(this.scene)
+    this.world = new WorldController(this.scene, this.water, this.shadowGenerator, 'peninsula world.glb')
+    
     this.player = new PlayerController(
       this.scene,
       this.overlay,
