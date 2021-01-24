@@ -68,6 +68,7 @@ const float DEGRAD = M_PI / 180.0;
 				varying vec3 vNormal;
 				varying vec2 vUV;
 				uniform sampler2D iChannel0;
+				uniform sampler2D iChannel1;
 				uniform float sunx;
 				uniform float suny;
 				//uniform float moonx;
@@ -353,7 +354,7 @@ vec4 generate(in vec2 uv, in vec2 fragCoord, in vec2 sunpos, in float t) {
 	scatter(O, D, color, scat, t);
 	color *= att;
 	
-	float starcolor = StableStarField(fragCoord,startreshold);
+	vec4 starcolor = texture(iChannel1, uv + sunpos);
 	color += vec3(scat*starcolor*staratt);
 	float env = 1.0;
 	return(vec4(env * pow(color, vec3(.7)), 1.0));
@@ -376,9 +377,11 @@ export function getSkyMaterial(scene: Scene): ShaderMaterial {
 	})
 
 	const mainTexture = new Texture('/assets/cloud noise.png', scene, true, false, 12)
+	const stars = new Texture('/assets/stars.jpeg', scene, true, false, 12)
 
 	//https://www.shadertoy.com/view/ltlSWB
-	shaderMaterial.setTexture('iChannel0', mainTexture) 
+	shaderMaterial.setTexture('iChannel0', mainTexture)
+	shaderMaterial.setTexture('iChannel1', stars)
 	shaderMaterial.setFloat('time', 0)
 	shaderMaterial.setFloat('offset', 0)
 	shaderMaterial.setFloat('sunx',0)

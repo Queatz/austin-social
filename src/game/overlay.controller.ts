@@ -1,21 +1,26 @@
-import { Bone, AbstractMesh, Scene, DynamicTexture, StandardMaterial, MeshBuilder, Mesh, Vector3, Texture, Engine, Color3 } from '@babylonjs/core'
+import { Bone, AbstractMesh, Scene, DynamicTexture, StandardMaterial, MeshBuilder, Mesh, Vector3, Texture, Engine, Color3, Matrix, VertexBuffer, Scalar } from '@babylonjs/core'
 
 export class OverlayController {
   constructor(private scene: Scene) {
 
   }
 
-  showInteractions(text: string, options: Array<String>, bone: Bone, hero: AbstractMesh, vanish: boolean): Array<Mesh> {
-    
+  showInteractions(text: string, options: Array<[string, () => void]>, bone: Bone, hero: AbstractMesh, vanish: boolean): Array<Mesh> {
+    return [
+      this.text(text, bone, hero, false, 1),
+      ...options.map((x, i) => {
+        return this.text(x[0], bone, hero, false, i + 2, x[1]);
+      })
+    ];
   }
 
-  text(text: string, bone: Bone, hero: AbstractMesh, vanish: boolean): Mesh {
+  text(text: string, bone: Bone, hero: AbstractMesh, vanish: boolean = false, position?: number, callback?: () => void): Mesh {
     var font_size = 48
     var font = 'normal ' + font_size + 'px Arial'
     
     var planeHeight = .25
     var DTHeight = 1.5 * font_size
-    var ratio = planeHeight/DTHeight
+    var ratio = planeHeight / DTHeight
 
     var temp = new DynamicTexture('DynamicTexture', 64, this.scene, false)
     var tmpctx = temp.getContext()
@@ -33,15 +38,15 @@ export class OverlayController {
       Engine.TEXTUREFORMAT_ALPHA
     )
 
-    if (vanish) {
+    if (vanish || position) {
       dynamicTexture.getContext().fillStyle = '#ffffff'
       this.canvasRoundRect(dynamicTexture.getContext(), 0, 0, DTWidth, DTHeight, 32)
     }
 
-    dynamicTexture.drawText(text, null, null, font, vanish ? '#000000' : '#ffffff', null as any)
+    dynamicTexture.drawText(text, null, null, font, (position || 0) > 1 ? '#B767D2' : vanish || position ? '#000000' : '#ffffff', null as any)
     var mat = new StandardMaterial('mat', this.scene)
     
-    if (vanish) {
+    if (vanish || position) {
       mat.emissiveTexture = dynamicTexture
     } else {
       mat.emissiveColor = Color3.White()
@@ -49,16 +54,29 @@ export class OverlayController {
 
     mat.opacityTexture = dynamicTexture
     mat.disableLighting = true
-    mat.backFaceCulling = false
+    mat.backFaceCulling = false//!!position
 
     //Create plane and set dynamic texture as material
-    var plane = MeshBuilder.CreatePlane('plane', { width: planeWidth, height: planeHeight }, this.scene)
+    var plane = MeshBuilder.CreatePlane('talk', { width: planeWidth, height: planeHeight, updatable: true }, this.scene)
     plane.material = mat
-    plane.billboardMode = Mesh.BILLBOARDMODE_ALL
+
+    if (position) {
+      const p = plane.getVerticesData(VertexBuffer.PositionKind)!
+      plane.geometry!.updateVerticesData(VertexBuffer.PositionKind, p.map((value: number, index: number) => index % 3 === 0 ? value + (planeWidth / 2) : value))
+    }
 
     plane.rotation.x = Math.PI
+    plane.billboardMode = Mesh.BILLBOARDMODE_ALL
 
-    if (vanish) {
+    if (position) {
+      plane.position.addInPlace(new Vector3(-.75, position * planeHeight * 1.25, 0))
+
+      plane.onBeforeBindObservable.add(() => {
+        let angle = plane.absolutePosition.subtract(this.scene.activeCamera!.globalPosition).normalize()
+
+        plane.visibility = Math.min(1, Math.max(0.01, Math.pow(Math.max(0, 1 - angle.z - .75), 4)))
+      })
+    } else if (vanish) {
       setTimeout(() => {
         plane.dispose(false, true)
       }, 5000)
@@ -66,7 +84,10 @@ export class OverlayController {
     } else {
       plane.position.addInPlace(new Vector3(0, -1, 0))
     }
+
     plane.attachToBone(bone, hero)
+
+    plane.metadata = { callback }
 
     return plane
   }

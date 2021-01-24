@@ -108,7 +108,7 @@ export class PlayerController {
       this.humanMaterial.albedoColor = Color3.FromHexString(this.skinTones[this.skinToneIndex]).toLinearSpace()
       this.humanMaterial.metallic = 0
       this.humanMaterial.roughness = .7
-      this.humanMaterial.directIntensity = 2.6
+      this.humanMaterial.directIntensity = 3
       this.humanMaterial.clearCoat.isEnabled = true
       this.humanMaterial.clearCoat.intensity = .2
       this.humanMaterial.clearCoat.roughness = .4
@@ -180,14 +180,14 @@ export class PlayerController {
 
       if (this.attachToCamera) {
         sayObservable?.subscribe(say => {
-          overlay?.text(say, this.skelHeadBone, this.humanRoot, true)
+          overlay?.text(say, this.skelHeadBone, human, true)
         })
       } else {
-        overlay?.showInteractions('hey, stranger! what can I do for you?', [
-          'Bake me a cake',
-          'Hang on to some items',
-          'Hug me sis!'
-        ], this.skelHeadBone, this.humanRoot, true)
+        overlay?.showInteractions('Hey, stranger! what can I do for you?', [
+          [ '🥮 Bake me a cake', () => { overlay?.text('ok!', this.skelHeadBone, human, true) } ],
+          [ '🗳 Hang on to some items', () => { overlay?.text('sure thing', this.skelHeadBone, human, true) } ],
+          [ '🤗 Hug me sis!', () => { overlay?.text('HUGGGG!!', this.skelHeadBone, human, true) } ]
+        ], this.skelHeadBone, human, true)
       }
 
       // Apparel + Style
@@ -316,7 +316,8 @@ export class PlayerController {
   toggleHair() {
     const styles = [
       'hair1',
-      'hair2'
+      'hair2',
+      'hair3'
     ]
 
     const idx = styles.indexOf(this.playerConfig.hairName)
@@ -387,7 +388,7 @@ export class PlayerController {
 
         const material = mesh!.material as PBRMaterial
 
-        material.directIntensity = 2
+        material.directIntensity = 4
         material.metallicReflectanceColor = (mesh!.material as PBRMaterial).albedoColor
         material.anisotropy.isEnabled = true
 
@@ -428,12 +429,11 @@ export class PlayerController {
 
         const material = dress!.material as PBRMaterial
 
-        material.directIntensity = 3
+        material.directIntensity = 6
         material.metallicReflectanceColor = (dress!.material as PBRMaterial).albedoColor
         material.sheen.isEnabled = true
         material.sheen.roughness = .1
-        material.sheen.linkSheenWithAlbedo = true
-        material.sheen.intensity = 1
+        material.sheen.intensity = .25
 
         const waterBump = new Texture('assets/waterbump.png', this.scene)
         waterBump.uScale = 1

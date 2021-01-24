@@ -1,4 +1,5 @@
-import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FollowCameraMouseWheelInput, FollowCameraPointersInput, FreeCamera, HemisphericLight, Mesh, Quaternion, Scene, ShaderMaterial, StandardMaterial, Texture, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
+import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, DynamicTexture, FollowCamera, FollowCameraMouseWheelInput, FollowCameraPointersInput, FreeCamera, HemisphericLight, Matrix, Mesh, MeshBuilder, Observer, Quaternion, Scalar, Scene, ShaderMaterial, StandardMaterial, Texture, Tools, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
+import { AdvancedDynamicTexture, Button, Control } from '@babylonjs/gui'
 import { GameController } from '../game.controller'
 import { InputController } from '../input.controller'
 import { getSkyMaterial } from '../materials/sky.material'
@@ -194,6 +195,54 @@ export class GameScreen implements Screen {
     this.scene.onBeforeRenderObservable.add(() => {
       this.update();
     })
+
+    this.setupUI()
+    
+    this.overlayScene.onPointerDown = () => {
+      const ray = this.overlayScene.createPickingRay(this.scene.pointerX, this.scene.pointerY, Matrix.Identity(), this.overlaySceneCamera)
+      const hit = this.overlayScene.pickWithRay(ray)
+
+      if (hit?.pickedMesh?.name === 'talk') {
+        hit!.pickedMesh!.metadata?.callback?.()
+      }
+    }   
+
+    this.scene.onPointerDown = () => {
+      const ray = this.scene.createPickingRay(this.scene.pointerX, this.scene.pointerY, Matrix.Identity(), this.camera)
+      const hit = this.scene.pickWithRay(ray)
+
+      if (hit?.pickedMesh?.name === 'screenshot') {
+        var image = new Image()
+        image.src = hit!.pickedMesh!.metadata.data
+
+        // TODO Change to URL eventually...
+        const w = window.open('')!
+        w.document.write(image.outerHTML)
+      }
+    }   
+  }
+
+  setupUI() {
+    const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI('UI', true, this.overlayScene)
+
+    const button = Button.CreateSimpleButton('button', 'Camera')
+    button.width = '200px'
+    button.height = '40px'
+    button.color = 'black'
+    button.cornerRadius = 20
+    button.background = 'white'
+    button.onPointerUpObservable.add(() => {
+      let func: () => void
+      func = () => {
+        this.scene.onAfterRenderObservable.removeCallback(func)
+        this.screenshot()
+      }
+      this.scene.onAfterRenderObservable.add(func)
+    })
+    advancedTexture.addControl(button)
+
+    button.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM
+    button.top = '-20px'
   }
 
   start(): void {
@@ -210,6 +259,18 @@ export class GameScreen implements Screen {
     this.p.update()
     this.p2.update()
 
+    if (this.input.single('l')) {
+      if (this.camera.maxCameraSpeed === 0) {
+        this.camera.maxCameraSpeed = 20
+      } else {
+        this.camera.maxCameraSpeed = 0
+      }
+    }
+
+    if (this.input.single('c')) {
+      this.screenshot()
+    }
+
     this.overlaySceneCamera.position = this.camera.position.clone()
     this.overlaySceneCamera.rotation = this.camera.rotation.clone()
     this.overlaySceneCamera.fov = this.camera.fov
@@ -218,7 +279,8 @@ export class GameScreen implements Screen {
 
     this.gameTime += 0.00002
 
-    this.sunPosition.rotateByQuaternionToRef(new Quaternion(-.00002, 0, 0, this.sunPosition.toQuaternion().w), this.sunPosition)
+    this.sunPosition.rotateByQuaternionToRef(new Quaternion(-.0002, 0, 0, this.sunPosition.toQuaternion().w), this.sunPosition)
+    this.sunPosition.rotateByQuaternionToRef(new Quaternion(0, -.0001, 0, this.sunPosition.toQuaternion().w), this.sunPosition)
 
     const howMuchDay = Math.pow(Math.max(0, 0.1 + this.sunPosition.y), .5)
 
@@ -244,6 +306,32 @@ export class GameScreen implements Screen {
     // shaderMaterial.setFloat('offset', gameTime)
     shaderMaterial.setFloat('suny', this.sunPosition.y)
     shaderMaterial.setFloat('sunx', Math.atan2(-this.sunPosition.z, -this.sunPosition.x) / -Math.PI)
+  }
+
+  screenshot() {
+    Tools.CreateScreenshotUsingRenderTargetAsync(this.camera.getEngine(), this.camera, {
+      width: this.scene.getEngine().getRenderWidth(),
+      height: this.scene.getEngine().getRenderHeight()
+      // width: 1920,
+      // height: 1080
+    }).then(data => {
+      const box = MeshBuilder.CreateBox('screenshot', {
+        width: 19.2,
+        height: 10.8 
+      }, this.scene)
+
+      box.metadata = { data }
+
+      box.position.copyFrom(this.player.hero.position)
+      box.position.y += 6
+      box.position.x += Scalar.RandomRange(-60, 60)
+      box.position.z += Scalar.RandomRange(-60, 60)
+      box.lookAt(this.player.hero.position, 0, 0, Math.PI)
+
+      const mat = new StandardMaterial('mat', this.scene)
+      mat.diffuseTexture = new Texture(data, this.scene)
+      box.material = mat
+    })
   }
 
   render(): void {

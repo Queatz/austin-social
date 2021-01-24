@@ -1,6 +1,5 @@
 import { Mesh, ShadowGenerator, SceneLoader, VertexBuffer, Texture, PBRMaterial, Color3, SolidParticleSystem, Vector3, Material, ShaderMaterial } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
-import { getGrassMaterial } from './materials/grass.material'
 import { WaterController } from './water.controller'
 
 // See https://playground.babylonjs.com/#NFSGWT#2 for better scattering
@@ -64,7 +63,7 @@ export class PlantsController {
           
               const scale = colors[p * 4] > .25 ? 1/25 : 0
               particle.scale.x = scale
-              particle.scale.y = scale * 5
+              particle.scale.y = scale * 4
               particle.scale.z = scale
           }
       }
