@@ -27,6 +27,7 @@
     "@babylonjs/core": "5.0.0-alpha.7",
     "@babylonjs/loaders": "5.0.0-alpha.7",
     "@babylonjs/materials": "5.0.0-alpha.7",
+    "@babylonjs/serializers": "5.0.0-alpha.7",
     "@babylonjs/gui": "5.0.0-alpha.7",
     "cannon": "^0.6.2",
     "rxjs": "~6.6.0",

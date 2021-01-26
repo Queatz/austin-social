@@ -62,9 +62,9 @@ export class PlantsController {
               particle.position = Vector3.FromArray(positions, p * 3)//.addInPlace(ground.position)
           
               const scale = colors[p * 4] > .25 ? 1/25 : 0
-              particle.scale.x = scale
+              particle.scale.x = scale * 2
               particle.scale.y = scale * 4
-              particle.scale.z = scale
+              particle.scale.z = scale * 2
           }
       }
 

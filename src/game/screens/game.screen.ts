@@ -81,6 +81,8 @@ export class GameScreen implements Screen {
     this.pipeline.depthOfField.focalLength = 85
     this.pipeline.depthOfField.lensSize = 85
     this.pipeline.depthOfField.fStop = 11
+    this.pipeline.imageProcessingEnabled = true
+    this.pipeline.imageProcessing.exposure = .5
 
     this.lutPostProcess = new ColorCorrectionPostProcess(
       'color_correction',
@@ -212,12 +214,7 @@ export class GameScreen implements Screen {
       const hit = this.scene.pickWithRay(ray)
 
       if (hit?.pickedMesh?.name === 'screenshot') {
-        var image = new Image()
-        image.src = hit!.pickedMesh!.metadata.data
-
-        // TODO Change to URL eventually...
-        const w = window.open('')!
-        w.document.write(image.outerHTML)
+        this.downloadLink(hit!.pickedMesh!.metadata.data, 'Austin Social Screenshot.png')
       }
     }   
   }
@@ -308,13 +305,26 @@ export class GameScreen implements Screen {
     shaderMaterial.setFloat('sunx', Math.atan2(-this.sunPosition.z, -this.sunPosition.x) / -Math.PI)
   }
 
+  downloadLink(href: string, name: string) {
+    var link = document.createElement('a')
+    link.download = name
+    link.href = href
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    link.remove()
+}
+
   screenshot() {
+    const w = this.game.engine.getRenderWidth()
+    const h = this.game.engine.getRenderHeight()
+    this.game.engine.setSize(1920, 1080)
     Tools.CreateScreenshotUsingRenderTargetAsync(this.camera.getEngine(), this.camera, {
-      width: this.scene.getEngine().getRenderWidth(),
-      height: this.scene.getEngine().getRenderHeight()
-      // width: 1920,
-      // height: 1080
+      width: 1920,
+      height: 1080
     }).then(data => {
+      this.game.engine.setSize(w, h)
+
       const box = MeshBuilder.CreateBox('screenshot', {
         width: 19.2,
         height: 10.8 

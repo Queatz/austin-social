@@ -1,4 +1,4 @@
-import { Bone, AbstractMesh, Scene, DynamicTexture, StandardMaterial, MeshBuilder, Mesh, Vector3, Texture, Engine, Color3, Matrix, VertexBuffer, Scalar } from '@babylonjs/core'
+import { Bone, AbstractMesh, Scene, DynamicTexture, StandardMaterial, MeshBuilder, Mesh, Vector3, Texture, Engine, Color3, Matrix, VertexBuffer, Scalar, Angle, FollowCamera } from '@babylonjs/core'
 
 export class OverlayController {
   constructor(private scene: Scene) {
@@ -68,24 +68,32 @@ export class OverlayController {
     plane.rotation.x = Math.PI
     plane.billboardMode = Mesh.BILLBOARDMODE_ALL
 
+    const node = new Mesh('pivot', hero.getScene())
+    node.attachToBone(bone, hero)
+
     if (position) {
-      plane.position.addInPlace(new Vector3(-.75, position * planeHeight * 1.25, 0))
+      node.position.addInPlace(new Vector3(.75, 0, 0))
+      plane.position.addInPlace(new Vector3(0, position * planeHeight * 1.25, 0))
 
       plane.onBeforeBindObservable.add(() => {
-        let angle = plane.absolutePosition.subtract(this.scene.activeCamera!.globalPosition).normalize()
-
-        plane.visibility = Math.min(1, Math.max(0.01, Math.pow(Math.max(0, 1 - angle.z - .75), 4)))
+        const camera = this.scene.activeCamera! as FollowCamera
+        const final = Math.abs(Scalar.DeltaAngle(
+          Angle.FromRadians(camera.rotation.y).degrees(),
+          Angle.FromRadians(hero.absoluteRotationQuaternion.toEulerAngles().y).degrees()
+        )) / 180
+        
+        plane.visibility = Math.min(1, Math.max(0.01, 1 - Math.pow(1 - (final < .75 ? 0 : ((final - .75)) / .25), 4)))
       })
     } else if (vanish) {
       setTimeout(() => {
-        plane.dispose(false, true)
+        node.dispose(false, true)
       }, 5000)
-      plane.position.addInPlace(new Vector3(0, -.667, 0))
+      node.position.addInPlace(new Vector3(0, .75, 0))
     } else {
-      plane.position.addInPlace(new Vector3(0, -1, 0))
+      node.position.addInPlace(new Vector3(0, 1, 0))
     }
-
-    plane.attachToBone(bone, hero)
+    
+    plane.parent = node
 
     plane.metadata = { callback }
 

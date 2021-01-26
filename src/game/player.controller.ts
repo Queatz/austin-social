@@ -186,7 +186,18 @@ export class PlayerController {
         overlay?.showInteractions('Hey, stranger! what can I do for you?', [
           [ '🥮 Bake me a cake', () => { overlay?.text('ok!', this.skelHeadBone, human, true) } ],
           [ '🗳 Hang on to some items', () => { overlay?.text('sure thing', this.skelHeadBone, human, true) } ],
-          [ '🤗 Hug me sis!', () => { overlay?.text('HUGGGG!!', this.skelHeadBone, human, true) } ]
+          [ '🤗 Hug me sis!', () => {
+            overlay?.text('HUGGGG!!', this.skelHeadBone, human, true)
+            this.animationGroups['pose']?.start(true, 1, this.animationGroups['pose']!.to, this.animationGroups['pose']!.to, false)
+            this.posing = true
+            this.animating = false
+
+            setTimeout(() => {
+              this.posing = false
+              this.animating = true
+            }, 1000)
+          }
+         ]
         ], this.skelHeadBone, human, true)
       }
 

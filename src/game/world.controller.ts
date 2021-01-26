@@ -1,5 +1,6 @@
 import { InstancedMesh, Material, Mesh, PBRMaterial, Scene, SceneLoader, ShadowGenerator, StandardMaterial, Texture } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
+import { getMixMaterial } from './materials/mix.material'
 import { PlantsController } from './plants.controller'
 import { WaterController } from './water.controller'
 
@@ -12,21 +13,18 @@ export class WorldController {
     SceneLoader.ImportMesh('', '/assets/', worldFileName, scene, result => {
       this.ground = scene.getMeshByName('Peninsula') as Mesh
 
-      const groundMaterial = new PBRMaterial('pbr', scene)
-      groundMaterial.metallic = 0
-      groundMaterial.roughness = .7
-      const texture = new Texture('assets/textures/grass.texture.png', scene)
-      texture.wrapU = texture.wrapV = Texture.MIRROR_ADDRESSMODE
-      texture.uScale = texture.vScale = 120
-      groundMaterial.albedoTexture = texture
-      groundMaterial.specularIntensity = 0.1
+      const textureSand = new Texture('assets/textures/peninsula sand.jpg', scene)
+      textureSand.uScale = textureSand.vScale = 200
+      const textureGrass = new Texture('assets/textures/peninsula grass.jpg', scene)
+      textureGrass.uScale = textureGrass.vScale = 200
+      const textureGround = new Texture('assets/textures/peninsula ground leaves.jpg', scene)
+      textureGround.uScale = textureGround.vScale = 200
 
-      const grassBump = new Texture('assets/grass_path_2_nor_1k.png', scene)
-      grassBump.uScale = grassBump.vScale = 50
-      grassBump.level = .5
-      groundMaterial.bumpTexture = grassBump
+      const mixTexture = (this.ground.material as PBRMaterial).albedoTexture as Texture
+      const groundMaterial = getMixMaterial(mixTexture, textureSand, textureGrass, textureGround)
 
-      this.ground.material = groundMaterial
+      this.ground!.material = groundMaterial
+
       this.ground.receiveShadows = true
       this.ground.checkCollisions = true
       this.ground.useVertexColors = false
