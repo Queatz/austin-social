@@ -1,5 +1,6 @@
 import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, DynamicTexture, FollowCamera, FollowCameraMouseWheelInput, FollowCameraPointersInput, FreeCamera, HemisphericLight, Matrix, Mesh, MeshBuilder, Observer, Quaternion, Scalar, Scene, ShaderMaterial, StandardMaterial, Texture, Tools, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
 import { AdvancedDynamicTexture, Button, Control } from '@babylonjs/gui'
+import { BirdController } from '../bird.controller'
 import { GameController } from '../game.controller'
 import { InputController } from '../input.controller'
 import { getSkyMaterial } from '../materials/sky.material'
@@ -32,6 +33,7 @@ export class GameScreen implements Screen {
   sunPosition = new Vector3(0, .5, 1)
   p: PlayerController
   p2: PlayerController
+  birds: BirdController
 
   constructor(public game: GameController) {
     this.scene = new Scene(game.engine)
@@ -144,6 +146,8 @@ export class GameScreen implements Screen {
     this.water.addToRenderList(this.skybox)
 
     this.world = new WorldController(this.scene, this.water, this.shadowGenerator, 'peninsula world.glb')
+
+    this.birds = new BirdController(this.scene, this.shadowGenerator)
 
     this.overlay = new OverlayController(this.overlayScene)
 
@@ -303,6 +307,8 @@ export class GameScreen implements Screen {
     // shaderMaterial.setFloat('offset', gameTime)
     shaderMaterial.setFloat('suny', this.sunPosition.y)
     shaderMaterial.setFloat('sunx', Math.atan2(-this.sunPosition.z, -this.sunPosition.x) / -Math.PI)
+
+    this.birds.update()
   }
 
   downloadLink(href: string, name: string) {

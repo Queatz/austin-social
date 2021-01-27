@@ -30,7 +30,16 @@ export class WorldController {
       this.ground.useVertexColors = false
       this.ground.hasVertexAlpha = false // because we use vertex colors
 
-      this.plants.addGrasses(this.ground, water, shadowGenerator)
+      result.forEach(mesh => {
+        if (mesh.name.startsWith('Pillar')) {
+          shadowGenerator.addShadowCaster(mesh)
+          water.addToRenderList(mesh)
+        }
+      })
+
+      this.plants.addGrasses(scene, this.ground, water, shadowGenerator)
+      this.plants.addRocks(scene, this.ground, water, shadowGenerator)
+      this.plants.addYellowTwigs(scene, this.ground, water, shadowGenerator)
 
       const treeMaterial = scene.getMaterialByName('Tree01') as StandardMaterial
       const treeMat = new PBRCustomMaterial('tree', scene)

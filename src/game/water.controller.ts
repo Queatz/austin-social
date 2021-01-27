@@ -1,4 +1,4 @@
-import { Color3, Mesh, Scene, StandardMaterial, Texture, Vector2 } from '@babylonjs/core'
+import { AbstractMesh, Color3, Mesh, Scene, StandardMaterial, Texture, Vector2 } from '@babylonjs/core'
 import { WaterMaterial } from '@babylonjs/materials'
 
 export class WaterController {
@@ -49,7 +49,7 @@ export class WaterController {
     this.waterMaterial.waterColor = color
   }
   
-  addToRenderList(mesh: Mesh) {
+  addToRenderList(mesh: AbstractMesh) {
     this.waterMaterial.addToRenderList(mesh)
   }
 }
