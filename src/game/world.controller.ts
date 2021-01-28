@@ -1,5 +1,6 @@
-import { InstancedMesh, Material, Mesh, MeshBuilder, PBRMaterial, Quaternion, Scalar, Scene, SceneLoader, ShadowGenerator, StandardMaterial, Texture, Vector3, VertexBuffer } from '@babylonjs/core'
+import { InstancedMesh, Material, Mesh, MeshBuilder, ParticleHelper, PBRMaterial, Quaternion, Scalar, Scene, SceneLoader, ShadowGenerator, StandardMaterial, Texture, Vector3, VertexBuffer } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
+import { DebrisController } from './debris.controller'
 import { getMixMaterial } from './materials/mix.material'
 import { PlantsController } from './plants.controller'
 import { WaterController } from './water.controller'
@@ -105,11 +106,17 @@ export class WorldController {
         }
       })
 
-      // this.plants.addGrasses(scene, this.ground, water, shadowGenerator)
-      // this.plants.addGrassPatches(scene, this.ground, water, shadowGenerator)
-      // this.plants.addThistles(scene, this.ground, water, shadowGenerator)
-      // this.plants.addRocks(scene, this.ground, water, shadowGenerator)
-      // this.plants.addYellowTwigs(scene, this.ground, water, shadowGenerator)
+      this.plants.addGrasses(scene, this.ground, water, shadowGenerator)
+      this.plants.addGrassPatches(scene, this.ground, water, shadowGenerator)
+      this.plants.addThistles(scene, this.ground, water, shadowGenerator)
+      this.plants.addRocks(scene, this.ground, water, shadowGenerator)
+      this.plants.addYellowTwigs(scene, this.ground, water, shadowGenerator)
+
+      ParticleHelper.CreateAsync('rain', scene, false).then(set => {
+        set.start()
+      })
+
+      new DebrisController(scene, this.ground!)
 
       const treeMaterial = scene.getMaterialByName('Tree01') as PBRMaterial
       const treeMat = new PBRCustomMaterial('tree', scene)
