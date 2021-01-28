@@ -1,4 +1,4 @@
-import { NodeMaterial, InputBlock, TransformBlock, NodeMaterialSystemValues, LightBlock, MultiplyBlock, Texture, TextureBlock, ColorMergerBlock, AddBlock, FragmentOutputBlock, VertexOutputBlock, Color3 } from '@babylonjs/core'
+import { NodeMaterial, InputBlock, TransformBlock, NodeMaterialSystemValues, LightBlock, MultiplyBlock, Texture, TextureBlock, ColorMergerBlock, AddBlock, FragmentOutputBlock, VertexOutputBlock, Color3, FogBlock } from '@babylonjs/core'
 
 export const getMixMaterial = (mixTexture: Texture, textureRed?: Texture, textureGreen?: Texture, textureBlue?: Texture): NodeMaterial => {
   const nodeMaterial = new NodeMaterial('node')
@@ -153,6 +153,18 @@ export const getMixMaterial = (mixTexture: Texture, textureRed?: Texture, textur
   vertexOutput.visibleInInspector = false
   vertexOutput.visibleOnFrame = false
 
+  
+  // FogBlock
+  var Fog = new FogBlock('Fog')
+  Fog.visibleInInspector = false
+  Fog.visibleOnFrame = false
+
+
+  // InputBlock
+  var Fogcolor = new InputBlock('Fog color');
+  Fogcolor.setAsSystemValue(NodeMaterialSystemValues.FogColor);
+  worldPos.output.connectTo(Fog.worldPosition);
+
   // Connections
   position.output.connectTo(worldPos.vector)
   world.output.connectTo(worldPos.transform)
@@ -204,7 +216,10 @@ export const getMixMaterial = (mixTexture: Texture, textureRed?: Texture, textur
   MixMap.b.connectTo(ColorMerger2.b)
   ColorMerger2.rgb.connectTo(Multiply4.right)
   Multiply4.output.connectTo(Add1.right)
-  Add1.output.connectTo(fragmentOutput.rgb)
+  View.output.connectTo(Fog.view)
+  Add1.output.connectTo(Fog.input)
+  Fogcolor.output.connectTo(Fog.fogColor)
+  Fog.output.connectTo(fragmentOutput.rgb)
 
   // Output nodes
   nodeMaterial.addOutputNode(vertexOutput)

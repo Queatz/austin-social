@@ -39,7 +39,7 @@ export class BirdController {
     SPS.updateParticle = (particle: SolidParticle) => {
         const d = Vector3.Distance(Vector3.Zero(), particle.position)
         particle.position.rotateByQuaternionAroundPointToRef(
-            Quaternion.FromEulerAngles(0, (scene.deltaTime || 0) / -50 / d, 0),
+            Quaternion.FromEulerAngles(0, (scene.getEngine().getDeltaTime()) / -50 / d, 0),
             Vector3.Zero(),
             particle.position
         )

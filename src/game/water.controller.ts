@@ -7,8 +7,8 @@ export class WaterController {
   groundMesh: Mesh
 
   constructor(private scene: Scene) {
-    const groundTexture = new Texture('assets/sand.jpg', scene)
-    groundTexture.vScale = groundTexture.uScale = 10.0
+    const groundTexture = new Texture('assets/textures/lake floor.jpg', scene)
+    groundTexture.vScale = groundTexture.uScale = 50
 
     const groundMaterial = new StandardMaterial('groundMaterial', scene)
     groundMaterial.specularColor = Color3.Black()

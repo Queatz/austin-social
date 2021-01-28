@@ -1,8 +1,7 @@
-import { ArcRotateCamera, Engine } from '@babylonjs/core'
+import { Engine } from '@babylonjs/core'
 import { Observable } from 'rxjs'
 import { MusicController } from './music.controller'
 import { ScreenController } from './screen.controller'
-import { GameScreen } from './screens/game.screen'
 import { MainScreen } from './screens/main.screen'
 
 export class GameController {
@@ -16,7 +15,6 @@ export class GameController {
     this.engine = new Engine(canvas, true)
 
     this.screen.show(new MainScreen(this))
-    // this.screen.show(new GameScreen(this))
 
     this.engine.runRenderLoop(() => {
       this.screen.render()

@@ -7,10 +7,25 @@ export class PlantsController {
   addRocks(scene: Scene, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator): void {
     const rnd = seedrandom('rock')
     
-    this.scatter(scene, 'rock.glb', 'Rock', .05, ground, water, shadowGenerator, (particle, info) => {
+    this.scatter(scene, 'rock.glb', 'Rock', .05, ground, water, shadowGenerator, (particle, info, mesh) => {
       particle.rotation.y += rnd() * Math.PI
       particle.scale.scaleInPlace((rnd() + .5) * .333)
-    }, undefined, .5)
+
+      const r = particle.scale.y * mesh.getBoundingInfo().boundingSphere.radius
+
+      const collider = MeshBuilder.CreateCylinder('Collision', {
+        height: r*2,
+        diameter: 2 * r,
+        subdivisions: 1,
+        tessellation: 6
+      }, scene)
+      collider.collisionRetryCount = 5
+      collider.isVisible = false
+      collider.checkCollisions = true
+      collider.position.copyFrom(particle.position)
+      collider.parent = ground
+
+    }, undefined, undefined, .5)
   }
 
   addGrasses(scene: Scene, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator): void {
@@ -38,7 +53,7 @@ export class PlantsController {
       let time = 0
 
       grassMat.onBindObservable.add(() => { 
-        time += scene.deltaTime || 0
+        time += scene.getEngine().getDeltaTime()
         grassMat.getEffect().setFloat('time', time)
       })
 
@@ -53,85 +68,156 @@ export class PlantsController {
     })
   }
 
+  addGrassPatches(scene: Scene, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator): void {
+    this.scatter(scene, 'grass patch.glb', 'Grass Patch', .4, ground, water, shadowGenerator, (particle, info) => {
+      const scale = .1 + info[2] * .4
+      particle.scale.scaleInPlace(scale)
+    }, material => {
+      const tex = (material as PBRMaterial).albedoTexture
+      tex.hasAlpha = true
+
+      const grassMat = new PBRCustomMaterial('grass patch', scene)
+      grassMat.albedoTexture = tex
+      grassMat.directIntensity = 12
+      grassMat.roughness = .7
+      grassMat.metallic = .0
+      grassMat.specularIntensity = 0
+      grassMat.useAlphaFromAlbedoTexture = true
+      grassMat.transparencyMode = Material.MATERIAL_ALPHATEST
+      grassMat.backFaceCulling = false
+      grassMat.AddUniform('time', 'float', null)
+
+      let time = 0
+
+      grassMat.onBindObservable.add(() => { 
+        time += scene.getEngine().getDeltaTime()
+        grassMat.getEffect().setFloat('time', time)
+      })
+
+      grassMat.Vertex_Before_PositionUpdated(`
+        float influence = pow(1. - uv.y, 2.) / 8.;
+        float t = time / 4000. + positionUpdated.x / 4. + positionUpdated.y / 4.;
+
+        result = vec3(positionUpdated + influence * vec3(sin(t), 0., cos(t)));
+      `)
+
+      return grassMat
+    }, undefined, 1)
+  }
+
   addYellowTwigs(scene: Scene, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator): void {
-    this.scatter(scene, 'yellow twig tree.glb', ['Leaves', 'Twigs'], .17, ground, water, shadowGenerator, (particle, info) => {
+    this.scatter(scene, 'yellow twig tree.glb', ['Leaves', 'Twigs'], .017, ground, water, shadowGenerator, (particle, info) => {
       const rnd = seedrandom(particle.idx.toString())
     
       particle.rotation.y += rnd() * Math.PI
       particle.scale.scaleInPlace(info[2] > .25 ? info[2] : 0.25)
-    }, undefined, .5)
+    }, undefined, undefined, .5)
   }
 
-  scatter(scene: Scene, fileName: string, meshName: string | Array<string>, density: number, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator, particleCallback?: (particle: SolidParticle, info: [Vector3, Vector3, number]) => void, materialCallback?: (material: Material) => Material, alignToNormal = 0): void {
+  addThistles(scene: Scene, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator): void {
+    this.scatter(scene, 'thistle.glb', 'Thistle', .07, ground, water, shadowGenerator, (particle, info) => {
+      const rnd = seedrandom(particle.idx.toString())
+    
+      particle.rotation.y += rnd() * Math.PI
+      particle.scale.scaleInPlace(info[2] > .25 ? info[2] : 0.25).scaleInPlace(1.5)
+    }, material => {
+      (material as PBRMaterial).directIntensity = 4
+      material.transparencyMode = Material.MATERIAL_ALPHATEST
+
+      return material
+    }, undefined, 0, true)
+  }
+
+  scatter(scene: Scene, fileName: string | undefined, meshName: string | Array<string> | Mesh | Array<Mesh>, density: number, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator, particleCallback?: (particle: SolidParticle, info: [Vector3, Vector3, number], mesh: Mesh) => void, materialCallback?: (material: Material) => Material, meshCallback?: (mesh: Mesh) => void, alignToNormal = 0, billboard = false, colorFunc?: (color: Vector4) => number): void {
     if (Array.isArray(meshName)) {
-      meshName.forEach(x => {
-        this.scatter(scene, fileName, x, density, ground, water, shadowGenerator, particleCallback, materialCallback, alignToNormal)
+      meshName.forEach((x: string | Mesh) => {
+        this.scatter(scene, fileName, x, density, ground, water, shadowGenerator, particleCallback, materialCallback, meshCallback, alignToNormal, billboard, colorFunc)
       })
       
       return
     }
     
-    SceneLoader.LoadAssetContainer('assets/', fileName, scene, meshes => {
-      const positions = ground.getVerticesData(VertexBuffer.PositionKind)!
-      const normals = ground.getVerticesData(VertexBuffer.NormalKind)!
-      const colors = ground.getVerticesData(VertexBuffer.ColorKind)!
-      const indices = ground.getIndices()!
-      const points = this.createSurfacePoints(positions, normals, colors, indices, density)
-
-      const scatterMesh = meshes.meshes.find(x => x.name === meshName) as Mesh
-
-      if (materialCallback) { 
-        scatterMesh.material = materialCallback(scatterMesh.material!)
-      }
-
-      const SPS = new SolidParticleSystem('SPS', scene, {
-        useModelMaterial: true
+    if (meshName instanceof Mesh) {
+      this.generate(scene, meshName as Mesh, density, ground, water, shadowGenerator, particleCallback, materialCallback, meshCallback, alignToNormal, billboard, colorFunc)
+    } else {
+      SceneLoader.LoadAssetContainer('assets/', fileName, scene, meshes => {
+        this.generate(scene, meshes.meshes.find(x => x.name === meshName) as Mesh, density, ground, water, shadowGenerator, particleCallback, materialCallback, meshCallback, alignToNormal, billboard, colorFunc)
       })
-
-      SPS.addShape(scatterMesh, points.length)
-      const mesh = SPS.buildMesh()
-
-      mesh.position = ground.position
-      mesh.rotation = ground.rotation
-      mesh.rotationQuaternion = ground.rotationQuaternion
-      mesh.parent = ground.parent
-
-      SPS.initParticles = () => {
-        for (let p = 0; p < points.length; p++) {
-          const particle = SPS.particles[p]  
-          const point = points[p]
-          particle.position.copyFrom(point[0])
-          
-          if(alignToNormal) {
-            const quat = new Quaternion()
-            Quaternion.FromUnitVectorsToRef(new Vector3(0, 1, 0), point[1], quat)
-            particle.rotationQuaternion = Quaternion.Identity().multiply(quat.scale(alignToNormal))
-          }
-
-          particleCallback?.(particle, point)
-        }
-      }
-
-      SPS.isAlwaysVisible = true
-      SPS.initParticles()
-      SPS.setParticles()
-      SPS.mesh.freezeWorldMatrix()
-      SPS.mesh.freezeNormals()
-
-      SPS.mesh.useVertexColors = false
-      SPS.mesh.hasVertexAlpha = false
-      SPS.mesh.receiveShadows = true
-      SPS.computeParticleRotation = false
-      SPS.computeParticleColor = false
-      SPS.computeParticleTexture = false
-      SPS.computeParticleVertex = false
-      SPS.computeBoundingBox = false
-      shadowGenerator.addShadowCaster(SPS.mesh)
-      water.addToRenderList(SPS.mesh)
-    })
+    }
   }
 
-  createSurfacePoints(positions: FloatArray, normals: FloatArray, colors: FloatArray, indices: IndicesArray, pointDensity: number = 1): Array<[Vector3, Vector3, number]> {
+  private generate(scene: Scene, scatterMesh: Mesh, density: number, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator, particleCallback?: (particle: SolidParticle, info: [Vector3, Vector3, number], mesh: Mesh) => void, materialCallback?: (material: Material) => Material, meshCallback?: (mesh: Mesh) => void, alignToNormal = 0, billboard = false, colorFunc?: (color: Vector4) => number) {
+    const positions = ground.getVerticesData(VertexBuffer.PositionKind)!
+    const normals = ground.getVerticesData(VertexBuffer.NormalKind)!
+    const colors = ground.getVerticesData(VertexBuffer.ColorKind)!
+    const indices = ground.getIndices()!
+    const points = this.createSurfacePoints(positions, normals, colors, indices, colorFunc, density)
+    
+    if (materialCallback) { 
+      scatterMesh.material = materialCallback(scatterMesh.material!)
+    }
+
+    const SPS = new SolidParticleSystem('SPS', scene, {
+      useModelMaterial: true
+    })
+
+    SPS.addShape(scatterMesh, points.length)
+    const mesh = SPS.buildMesh()
+
+    mesh.position = ground.position
+    mesh.rotation = ground.rotation
+    mesh.rotationQuaternion = ground.rotationQuaternion
+    mesh.parent = ground.parent
+
+    SPS.initParticles = () => {
+      for (let p = 0; p < points.length; p++) {
+        const particle = SPS.particles[p]  
+        const point = points[p]
+        particle.position.copyFrom(point[0])
+        
+        if(alignToNormal) {
+          const quat = new Quaternion()
+          Quaternion.FromUnitVectorsToRef(new Vector3(0, 1, 0), point[1], quat)
+          particle.rotationQuaternion = Quaternion.Identity().multiply(quat.scale(alignToNormal))
+        }
+
+        particleCallback?.(particle, point, scatterMesh)
+      }
+    }
+
+    SPS.isAlwaysVisible = true
+    SPS.initParticles()
+    SPS.setParticles()
+    SPS.mesh.freezeWorldMatrix()
+
+    if (!billboard) {
+      SPS.mesh.freezeNormals()
+    }
+
+    SPS.mesh.useVertexColors = false
+    SPS.mesh.hasVertexAlpha = false
+    SPS.mesh.receiveShadows = true
+    SPS.computeParticleRotation = false
+    SPS.computeParticleColor = false
+    SPS.computeParticleTexture = false
+    SPS.computeParticleVertex = false
+    SPS.computeBoundingBox = false
+    shadowGenerator.addShadowCaster(SPS.mesh)
+    water.addToRenderList(SPS.mesh)
+
+    if (billboard) {
+      SPS.billboard = true
+      SPS.mesh.onBeforeBindObservable.add(() => {
+        SPS.setParticles()
+      })
+    }
+
+    meshCallback?.(SPS.mesh)
+  }
+
+  private createSurfacePoints(positions: FloatArray, normals: FloatArray, colors: FloatArray, indices: IndicesArray, colorFunc?: (color: Vector4) => number, pointDensity: number = 1): Array<[Vector3, Vector3, number]> {
+    if (!colorFunc) colorFunc = x => x.x
+    
     let points = [] as Array<[Vector3, Vector3, number]>
     
     let id0 = 0
@@ -190,7 +276,7 @@ export class PlantsController {
       p = (a + b + c) / 2        
       area = Math.sqrt(p * (p - a) * (p - b) * (p - c))
 
-      const overallColor = (color0.x + color1.x + color2.x) / 3
+      const overallColor = (colorFunc(color0) + colorFunc(color1) + colorFunc(color2)) / 3
 
       nbPoints = Math.round(pointDensity * area * overallColor)
 

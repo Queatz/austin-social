@@ -90,13 +90,15 @@ export class PlayerController {
   ) {
     this.walkingSound = new Sound('sound', 'assets/walk.ogg', scene)
     
-    this.hero = MeshBuilder.CreateBox('hero', {
-      size: this.heroSize
+    this.hero = MeshBuilder.CreateCylinder('hero', {
+      height: this.heroSize,
+      diameter: this.heroSize
     }, scene)
 
+    this.hero.collisionRetryCount = 5
     this.hero.checkCollisions = true
-    this.hero.ellipsoid = new Vector3(1, 4, 1)
-    this.hero.ellipsoidOffset = new Vector3(0, 4, 0)
+    this.hero.ellipsoid = new Vector3(this.heroSize, this.heroSize, this.heroSize)
+    this.hero.ellipsoidOffset = new Vector3(0, 1, 0)
     this.hero.isVisible = false
 
     this.walkingSound.attachToMesh(this.hero)
@@ -472,27 +474,28 @@ export class PlayerController {
   }
 
   update() {
+    let dt = this.scene.getEngine().getDeltaTime()
     let keydown = false, didSit = false, didPose = false
 
     if (this.input) {
       if (this.input.pressed('w')) {  
-        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * this.scene.deltaTime))
+        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * dt))
         keydown = true
       }
       if (this.input.pressed('e')) {  
-        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * 4 * this.scene.deltaTime))
+        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * 4 * dt))
         keydown = true
       }
       if (this.input.pressed('s')) {
-          this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(-this.heroSpeedBackwards * this.scene.deltaTime))
+          this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(-this.heroSpeedBackwards * dt))
           keydown = true
       }
       if (this.input.pressed('a')) {
-          this.hero.rotate(Vector3.Up(), -this.heroRotationSpeed * this.scene.deltaTime)
+          this.hero.rotate(Vector3.Up(), -this.heroRotationSpeed * dt)
           keydown = true
       }
       if (this.input.pressed('d')) {
-          this.hero.rotate(Vector3.Up(), this.heroRotationSpeed * this.scene.deltaTime)
+          this.hero.rotate(Vector3.Up(), this.heroRotationSpeed * dt)
           keydown = true
       }
       if (this.input.pressed('b')) {
@@ -590,7 +593,7 @@ export class PlayerController {
       const hit = ray.intersectsMesh(this.water.waterMesh as DeepImmutableObject<AbstractMesh>, false)
       
       if (hit.hit) {
-        this.hero.moveWithCollisions(new Vector3(0, 16 * hit.distance * this.scene.deltaTime / 1000, 0))
+        this.hero.moveWithCollisions(new Vector3(0, 16 * hit.distance * dt / 1000, 0))
       }
     }
 
@@ -599,7 +602,7 @@ export class PlayerController {
       const hit = ray.intersectsMesh(this.world.ground as DeepImmutableObject<AbstractMesh>, false)
 
       if (!hit.hit) {
-        this.hero.moveWithCollisions(new Vector3(0, -9.81 * this.scene.deltaTime / 1000, 0))
+        this.hero.moveWithCollisions(new Vector3(0, -9.81 * dt / 1000, 0))
       } else {
         this.hero.position.y = hit.pickedPoint!.y + this.heroSize / 2
       }
@@ -630,30 +633,32 @@ export class PlayerController {
     ]
 
     const speed = 4
+
+    const dt = this.scene.getEngine().getDeltaTime()
     
-    if (this.scene.deltaTime) {
+    if (dt) {
       if (animating && weights.walking < 1) {
-        weights.walking += scene.deltaTime / 1000 * speed
+        weights.walking += dt / 1000 * speed
       } else if (!animating && weights.walking > 0) {
-        weights.walking -= scene.deltaTime / 1000 * speed * 1.5
+        weights.walking -= dt / 1000 * speed * 1.5
       }
 
       if (sitting && weights.sitting < 1) {
-        weights.sitting += scene.deltaTime / 1000 * speed
+        weights.sitting += dt / 1000 * speed
       } else if (!sitting && weights.sitting > 0) {
-        weights.sitting -= scene.deltaTime / 1000 * speed * 1.5
+        weights.sitting -= dt / 1000 * speed * 1.5
       }
 
       if (posing && weights.pose < 1) {
-        weights.pose += scene.deltaTime / 1000 * speed
+        weights.pose += dt / 1000 * speed
       } else if (!posing && weights.pose > 0) {
-        weights.pose -= scene.deltaTime / 1000 * speed * 1.5
+        weights.pose -= dt / 1000 * speed * 1.5
       }
 
       if (!(animating || sitting || posing) && weights.idle < 1) {
-        weights.idle += scene.deltaTime / 1000 * speed
+        weights.idle += dt / 1000 * speed
       } else if ((animating || sitting || posing) && weights.idle > 0) {
-        weights.idle -= scene.deltaTime / 1000 * speed * 1.5
+        weights.idle -= dt / 1000 * speed * 1.5
       }
 
       weights.walking = Math.min(1, Math.max(0, weights.walking))
@@ -669,7 +674,7 @@ export class PlayerController {
 
     Object.values(this.morphs).forEach(morphie => {
       if (morphie.value !== morphie.target) {
-        morphie.value += 0.005 * this.scene.deltaTime * (morphie.value < morphie.target ? 1 : -1)
+        morphie.value += 0.005 * dt * (morphie.value < morphie.target ? 1 : -1)
         morphie.value = Scalar.Clamp(morphie.value, 0, 1)
       }
   
