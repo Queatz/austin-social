@@ -1,4 +1,4 @@
-import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, DynamicTexture, FollowCamera, FollowCameraMouseWheelInput, FollowCameraPointersInput, FreeCamera, HemisphericLight, Matrix, Mesh, MeshBuilder, Observer, Quaternion, Scalar, Scene, ShaderMaterial, StandardMaterial, Texture, Tools, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
+import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, DynamicTexture, Engine, FollowCamera, FollowCameraMouseWheelInput, FollowCameraPointersInput, FreeCamera, HemisphericLight, Material, Matrix, Mesh, MeshBuilder, Observer, Quaternion, Scalar, Scene, ShaderMaterial, StandardMaterial, Texture, Tools, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
 import { AdvancedDynamicTexture, Button, Control } from '@babylonjs/gui'
 import { BirdController } from '../bird.controller'
 import { DuckController } from '../duck.controller'
@@ -31,11 +31,12 @@ export class GameScreen implements Screen {
   godrayMaterial: StandardMaterial
 
   gameTime = 0
-  sunPosition = new Vector3(0, .5, 1)
+  sunPosition = new Vector3(0, -.5, 1).normalize()
   p: PlayerController
   p2: PlayerController
   birds: BirdController
   ducks: DuckController
+  moon: Mesh
 
   constructor(public game: GameController) {
     this.scene = new Scene(game.engine)
@@ -121,6 +122,20 @@ export class GameScreen implements Screen {
     this.godrayMaterial.diffuseColor = Color3.Black()
     this.godrays.mesh.material = this.godrayMaterial
 
+    this.moon = MeshBuilder.CreatePlane('Moon', {
+      size: 25
+    }, this.scene)
+    this.moon.isVisible = false
+    this.moon.applyFog = false
+    this.moon.billboardMode = Mesh.BILLBOARDMODE_ALL
+    this.moon.alphaIndex = 0
+
+    const moonMat = new StandardMaterial('Moon', this.scene)
+    moonMat.transparencyMode = Material.MATERIAL_ALPHABLEND
+    moonMat.opacityTexture = moonMat.emissiveTexture = new Texture('assets/moon.png', this.scene)
+    moonMat.emissiveColor = Color3.FromArray([.5, .4, .3]).toLinearSpace()
+    this.moon.material = moonMat
+
     this.light = new DirectionalLight('light', new Vector3(-25, -10, 0).normalize(), this.scene)
     this.light.intensity = 1
     this.light.shadowMinZ = this.camera.minZ
@@ -146,6 +161,7 @@ export class GameScreen implements Screen {
 
     this.water = new WaterController(this.scene)
     this.water.addToRenderList(this.skybox)
+    this.water.addToRenderList(this.moon)
 
     this.world = new WorldController(this.scene, this.water, this.shadowGenerator, 'peninsula world.glb')
 
@@ -301,7 +317,15 @@ export class GameScreen implements Screen {
 
     this.light.direction = this.sunPosition.negate().normalize()
     this.ambientLight.direction = this.light.direction.clone()
-    this.godrays.mesh.position = this.sunPosition.scale(500).add(this.camera.position)
+    this.godrays.mesh.position.copyFrom(this.sunPosition.scale(500).add(this.camera.position))
+
+    if (this.sunPosition.y > Math.PI / 2) {
+      this.moon.isVisible = false
+    } else {
+      this.moon.isVisible = true
+      this.moon.position.copyFrom(this.sunPosition.negate().scale(500).add(this.camera.position))
+      this.moon.scaling.setAll(1 + this.sunPosition.y * 1.5)
+    }
 
     this.light.position = this.player.hero.position.clone().subtract(this.light.direction.scale(50))
 
