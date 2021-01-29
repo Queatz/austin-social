@@ -114,6 +114,10 @@ export class WorldController {
 
       ParticleHelper.CreateAsync('rain', scene, false).then(set => {
         set.start()
+
+        set.systems[0].onBeforeDrawParticlesObservable.add(() => {
+          (set.systems[0].emitter as Vector3).copyFrom(scene.activeCamera!.globalPosition.add(new Vector3(0, 30, 0)))
+        })
       })
 
       new DebrisController(scene, this.ground!)

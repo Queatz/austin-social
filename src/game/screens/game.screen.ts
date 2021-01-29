@@ -31,7 +31,7 @@ export class GameScreen implements Screen {
   godrayMaterial: StandardMaterial
 
   gameTime = 0
-  sunPosition = new Vector3(0, -.5, 1).normalize()
+  sunPosition = new Vector3(0, -.15, 1).normalize()
   p: PlayerController
   p2: PlayerController
   birds: BirdController
