@@ -7,7 +7,7 @@ export class PlantsController {
   addRocks(scene: Scene, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator): void {
     const rnd = seedrandom('rock')
     
-    this.scatter(scene, 'rock.glb', 'Rock', .05, ground, water, shadowGenerator, (particle, info, mesh) => {
+    this.scatter(scene, 'rock.glb', 'Rock', .05, undefined, ground, water, shadowGenerator, (particle, info, mesh) => {
       particle.rotation.y += rnd() * Math.PI
       particle.scale.scaleInPlace((rnd() + .5) * .333)
 
@@ -29,7 +29,7 @@ export class PlantsController {
   }
 
   addGrasses(scene: Scene, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator): void {
-    this.scatter(scene, 'grass.glb', 'GrassPatch01', .08, ground, water, shadowGenerator, (particle, info) => {
+    this.scatter(scene, 'grass.glb', 'GrassPatch01', .08, undefined, ground, water, shadowGenerator, (particle, info) => {
       const scale = info[2] > .25 ? info[2] / 10 : 0.05 / 10
       particle.scale.x = scale
       particle.scale.y = scale * 2
@@ -69,7 +69,7 @@ export class PlantsController {
   }
 
   addGrassPatches(scene: Scene, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator): void {
-    this.scatter(scene, 'grass patch.glb', 'Grass Patch', .4, ground, water, shadowGenerator, (particle, info) => {
+    this.scatter(scene, 'grass patch.glb', 'Grass Patch', .4, 'grass', ground, water, shadowGenerator, (particle, info) => {
       const scale = .1 + info[2] * .4
       particle.scale.scaleInPlace(scale)
     }, material => {
@@ -106,7 +106,7 @@ export class PlantsController {
   }
 
   addYellowTwigs(scene: Scene, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator): void {
-    this.scatter(scene, 'yellow twig tree.glb', ['Leaves', 'Twigs'], .017, ground, water, shadowGenerator, (particle, info) => {
+    this.scatter(scene, 'yellow twig tree.glb', ['Leaves', 'Twigs'], .017, undefined, ground, water, shadowGenerator, (particle, info) => {
       const rnd = seedrandom(particle.idx.toString())
     
       particle.rotation.y += rnd() * Math.PI
@@ -115,7 +115,7 @@ export class PlantsController {
   }
 
   addThistles(scene: Scene, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator): void {
-    this.scatter(scene, 'thistle.glb', 'Thistle', .07, ground, water, shadowGenerator, (particle, info) => {
+    this.scatter(scene, 'thistle.glb', 'Thistle', .07, 'ehwptrgoi', ground, water, shadowGenerator, (particle, info) => {
       const rnd = seedrandom(particle.idx.toString())
     
       particle.rotation.y += rnd() * Math.PI
@@ -128,25 +128,25 @@ export class PlantsController {
     }, undefined, 0, true)
   }
 
-  scatter(scene: Scene, fileName: string | undefined, meshName: string | Array<string> | Mesh | Array<Mesh>, density: number, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator, particleCallback?: (particle: SolidParticle, info: [Vector3, Vector3, number], mesh: Mesh) => void, materialCallback?: (material: Material) => Material, meshCallback?: (mesh: Mesh) => void, alignToNormal = 0, billboard = false, colorFunc?: (color: Vector4) => number): void {
+  scatter(scene: Scene, fileName: string | undefined, meshName: string | Array<string> | Mesh | Array<Mesh>, density: number, seed: string | undefined, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator, particleCallback?: (particle: SolidParticle, info: [Vector3, Vector3, number], mesh: Mesh) => void, materialCallback?: (material: Material) => Material, meshCallback?: (mesh: Mesh) => void, alignToNormal = 0, billboard = false, colorFunc?: (color: Vector4) => number): void {
     if (Array.isArray(meshName)) {
       meshName.forEach((x: string | Mesh) => {
-        this.scatter(scene, fileName, x, density, ground, water, shadowGenerator, particleCallback, materialCallback, meshCallback, alignToNormal, billboard, colorFunc)
+        this.scatter(scene, fileName, x, density, seed, ground, water, shadowGenerator, particleCallback, materialCallback, meshCallback, alignToNormal, billboard, colorFunc)
       })
       
       return
     }
     
     if (meshName instanceof Mesh) {
-      this.generate(scene, meshName as Mesh, density, ground, water, shadowGenerator, particleCallback, materialCallback, meshCallback, alignToNormal, billboard, colorFunc)
+      this.generate(scene, meshName as Mesh, density, seed, ground, water, shadowGenerator, particleCallback, materialCallback, meshCallback, alignToNormal, billboard, colorFunc)
     } else {
       SceneLoader.LoadAssetContainer('assets/', fileName, scene, meshes => {
-        this.generate(scene, meshes.meshes.find(x => x.name === meshName) as Mesh, density, ground, water, shadowGenerator, particleCallback, materialCallback, meshCallback, alignToNormal, billboard, colorFunc)
+        this.generate(scene, meshes.meshes.find(x => x.name === meshName) as Mesh, density, seed, ground, water, shadowGenerator, particleCallback, materialCallback, meshCallback, alignToNormal, billboard, colorFunc)
       })
     }
   }
 
-  private generate(scene: Scene, scatterMesh: Mesh, density: number, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator, particleCallback?: (particle: SolidParticle, info: [Vector3, Vector3, number], mesh: Mesh) => void, materialCallback?: (material: Material) => Material, meshCallback?: (mesh: Mesh) => void, alignToNormal = 0, billboard = false, colorFunc?: (color: Vector4) => number) {
+  private generate(scene: Scene, scatterMesh: Mesh, density: number, seed: string | undefined, ground: Mesh, water: WaterController, shadowGenerator: ShadowGenerator, particleCallback?: (particle: SolidParticle, info: [Vector3, Vector3, number], mesh: Mesh) => void, materialCallback?: (material: Material) => Material, meshCallback?: (mesh: Mesh) => void, alignToNormal = 0, billboard = false, colorFunc?: (color: Vector4) => number) {
     const positions = ground.getVerticesData(VertexBuffer.PositionKind)!
     const normals = ground.getVerticesData(VertexBuffer.NormalKind)!
     const colors = ground.getVerticesData(VertexBuffer.ColorKind)!
@@ -215,7 +215,7 @@ export class PlantsController {
     meshCallback?.(SPS.mesh)
   }
 
-  private createSurfacePoints(positions: FloatArray, normals: FloatArray, colors: FloatArray, indices: IndicesArray, colorFunc?: (color: Vector4) => number, pointDensity: number = 1): Array<[Vector3, Vector3, number]> {
+  private createSurfacePoints(positions: FloatArray, normals: FloatArray, colors: FloatArray, indices: IndicesArray, colorFunc?: (color: Vector4) => number, pointDensity: number = 1, seed?: string): Array<[Vector3, Vector3, number]> {
     if (!colorFunc) colorFunc = x => x.x
     
     let points = [] as Array<[Vector3, Vector3, number]>
@@ -249,7 +249,7 @@ export class PlantsController {
     let lamda = 0
     let mu = 0
 
-    const rnd = seedrandom('austin')
+    const rnd = seedrandom(seed || 'austin')
 
     for(let index = 0; index < indices.length / 3; index++) {  				
       id0 = indices[3 * index]

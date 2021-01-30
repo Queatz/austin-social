@@ -1,5 +1,6 @@
 import { InstancedMesh, Material, Mesh, MeshBuilder, ParticleHelper, PBRMaterial, Quaternion, Scalar, Scene, SceneLoader, ShadowGenerator, StandardMaterial, Texture, Vector3, VertexBuffer } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
+import { AirplaneController } from './airplane.controller'
 import { DebrisController } from './debris.controller'
 import { getMixMaterial } from './materials/mix.material'
 import { PlantsController } from './plants.controller'
@@ -96,7 +97,7 @@ export class WorldController {
           mesh.material = treeMat
 
           setTimeout(() => {
-            this.plants.scatter(scene, undefined, mesh as Mesh, .1, this.ground!, water, shadowGenerator, particle => {
+            this.plants.scatter(scene, undefined, mesh as Mesh, .1, 'liltree', this.ground!, water, shadowGenerator, particle => {
               particle.color!.r = Math.random()
               particle.rotation.z = Math.random() * Math.PI / 16
             }, undefined, (mesh: Mesh) => {
@@ -121,6 +122,7 @@ export class WorldController {
       })
 
       new DebrisController(scene, this.ground!)
+      new AirplaneController(scene)
 
       const treeMaterial = scene.getMaterialByName('Tree01') as PBRMaterial
       const treeMat = new PBRCustomMaterial('tree', scene)

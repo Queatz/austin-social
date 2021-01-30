@@ -1,4 +1,4 @@
-import { AbstractMesh, Color4, DeepImmutableObject, FollowCamera, Mesh, Quaternion, Ray, Scene, SceneLoader, SolidParticleSystem, Vector3, Vector4 } from '@babylonjs/core'
+import { AbstractMesh, DeepImmutableObject, FollowCamera, Mesh, Ray, Scene, SceneLoader, SolidParticleSystem, Vector3 } from '@babylonjs/core'
 
 export class DebrisController {
 
@@ -35,7 +35,7 @@ export class DebrisController {
 
       SPS.updateParticle = particle => {
         const s = .012 * scene.getEngine().getDeltaTime()
-        particle.position.addInPlaceFromFloats(-0.15 * s, particle.props.grounded > 0 ? -scene.gravity.y * .25 : (scene.gravity.y * .25), -.1 * s)
+        particle.position.addInPlaceFromFloats(-0.15 * s, particle.props.grounded > 0 ? -scene.gravity.y * .25 * .5 : (scene.gravity.y * .25), -.1 * s)
         particle.rotation.addInPlaceFromFloats(.25 * Math.random(), .15 * Math.random(), .125 * Math.random())
 
         if (particle.props.grounded > 0) {
@@ -68,7 +68,7 @@ export class DebrisController {
       SPS.initParticles()
       SPS.setParticles()
       SPS.computeParticleTexture = false
-      // SPS.computeParticleColor = false
+      SPS.computeParticleColor = false
 
       SPS.mesh.onBeforeBindObservable.add(() => {
         SPS.setParticles()
