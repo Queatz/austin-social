@@ -12,7 +12,7 @@ export class GameController {
   music = new MusicController(this)
 
   constructor(public say: Observable<string>, canvas: HTMLCanvasElement) {
-    this.engine = new Engine(canvas, true)
+    this.engine = new Engine(canvas, false)
 
     this.screen.show(new MainScreen(this))
 

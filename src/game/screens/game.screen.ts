@@ -1,4 +1,4 @@
-import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, DynamicTexture, Engine, FollowCamera, FollowCameraMouseWheelInput, FollowCameraPointersInput, FreeCamera, HemisphericLight, Material, Matrix, Mesh, MeshBuilder, Observer, Quaternion, Scalar, Scene, ShaderMaterial, StandardMaterial, Texture, Tools, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
+import { CascadedShadowGenerator, Color3, Color4, ColorCorrectionPostProcess, DefaultRenderingPipeline, DepthOfFieldEffectBlurLevel, DirectionalLight, FollowCamera, FollowCameraMouseWheelInput, FollowCameraPointersInput, FreeCamera, HemisphericLight, Material, Matrix, Mesh, MeshBuilder, Quaternion, Scalar, Scene, ShaderMaterial, StandardMaterial, Texture, Tools, Vector3, VolumetricLightScatteringPostProcess } from '@babylonjs/core'
 import { AdvancedDynamicTexture, Button, Control } from '@babylonjs/gui'
 import { BirdController } from '../bird.controller'
 import { DuckController } from '../duck.controller'
@@ -88,13 +88,6 @@ export class GameScreen implements Screen {
     this.pipeline.depthOfField.fStop = 11
     this.pipeline.imageProcessingEnabled = true
     this.pipeline.imageProcessing.exposure = .5
-
-    this.lutPostProcess = new ColorCorrectionPostProcess(
-      'color_correction',
-      'assets/Fuji XTrans III - Classic Chrome.png',
-      1.0,
-      this.camera
-    )
   
     this.godrays = new VolumetricLightScatteringPostProcess(
       'godrays',
@@ -121,6 +114,13 @@ export class GameScreen implements Screen {
     this.godrayMaterial.emissiveColor = Color3.White()
     this.godrayMaterial.diffuseColor = Color3.Black()
     this.godrays.mesh.material = this.godrayMaterial
+
+    this.lutPostProcess = new ColorCorrectionPostProcess(
+      'color_correction',
+      'assets/Fuji XTrans III - Classic Chrome.png',
+      1.0,
+      this.camera
+    )
 
     this.moon = MeshBuilder.CreatePlane('Moon', {
       size: 25
@@ -350,32 +350,40 @@ export class GameScreen implements Screen {
 }
 
   screenshot() {
-    const w = this.game.engine.getRenderWidth()
-    const h = this.game.engine.getRenderHeight()
-    this.game.engine.setSize(1920, 1080)
-    Tools.CreateScreenshotUsingRenderTargetAsync(this.camera.getEngine(), this.camera, {
-      width: 1920,
-      height: 1080
-    }).then(data => {
-      this.game.engine.setSize(w, h)
+    const width = this.game.engine.getRenderWidth()
+    const height = this.game.engine.getRenderHeight()
 
-      const box = MeshBuilder.CreateBox('screenshot', {
-        width: 19.2,
-        height: 10.8 
-      }, this.scene)
+    let once = false
 
-      box.metadata = { data }
+    const screenshotCallback = () => {
+      if (once) return
+      once = true
 
-      box.position.copyFrom(this.player.hero.position)
-      box.position.y += 6
-      box.position.x += Scalar.RandomRange(-60, 60)
-      box.position.z += Scalar.RandomRange(-60, 60)
-      box.lookAt(this.player.hero.position, 0, 0, Math.PI)
+      Tools.CreateScreenshotUsingRenderTarget(this.game.engine, this.camera, {
+        precision: 1
+      }, data => {
+  
+        const box = MeshBuilder.CreateBox('screenshot', {
+          width: 10,
+          height: 10 * (height / width) 
+        }, this.scene)
+  
+        box.metadata = { data }
+  
+        box.position.copyFrom(this.player.hero.position)
+        box.position.y += 6
+        box.position.x += Scalar.RandomRange(-50, 50)
+        box.position.z += Scalar.RandomRange(-50, 50)
+        box.lookAt(this.player.hero.position, 0, 0, Math.PI)
+  
+        const mat = new StandardMaterial('mat', this.scene)
+        mat.emissiveTexture = mat.diffuseTexture = new Texture(data, this.scene)
+        mat.linkEmissiveWithDiffuse = true
+        box.material = mat
+      })
+    }
 
-      const mat = new StandardMaterial('mat', this.scene)
-      mat.diffuseTexture = new Texture(data, this.scene)
-      box.material = mat
-    })
+    this.scene.onAfterRenderObservable.addOnce(screenshotCallback)
   }
 
   render(): void {

@@ -691,6 +691,7 @@ export class PlayerController {
   updateCamera() {
     if (this.cameraTargetMesh) {
       const offset = new Vector3(0, this.cameraTargetMesh.getBoundingInfo().boundingBox.extendSize.y, 0)
+
       offset.rotateByQuaternionToRef(this.cameraTargetMesh.absoluteRotationQuaternion, offset)
       this.cameraTarget!.position.copyFrom(this.cameraTargetMesh.absolutePosition.add(offset))
 

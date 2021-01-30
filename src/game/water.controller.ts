@@ -20,8 +20,7 @@ export class WaterController {
     this.groundMesh.receiveShadows = true
 
     this.waterMesh = Mesh.CreateGround('waterMesh', 1024, 1024, 64, scene, false)
-
-    this.waterMaterial = new WaterMaterial('water', scene, new Vector2(512, 512))
+    this.waterMaterial = new WaterMaterial('water', scene, new Vector2(128, 128))
     this.waterMaterial.backFaceCulling = true
     const waterBump = new Texture('assets/waterbump.png', scene)
     waterBump.uScale = waterBump.vScale = 6
