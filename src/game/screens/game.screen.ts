@@ -230,7 +230,7 @@ export class GameScreen implements Screen {
       if (hit?.pickedMesh?.name === 'talk') {
         hit!.pickedMesh!.metadata?.callback?.()
       }
-    }   
+    }
 
     this.scene.onPointerDown = () => {
       const ray = this.scene.createPickingRay(this.scene.pointerX, this.scene.pointerY, Matrix.Identity(), this.camera)
@@ -239,7 +239,7 @@ export class GameScreen implements Screen {
       if (hit?.pickedMesh?.name === 'screenshot') {
         this.downloadLink(hit!.pickedMesh!.metadata.data, 'Austin Social Screenshot.png')
       }
-    }   
+    }
   }
 
   setupUI() {
@@ -350,6 +350,8 @@ export class GameScreen implements Screen {
 }
 
   screenshot() {
+    this.scene.particlesEnabled = false
+    
     const width = this.game.engine.getRenderWidth()
     const height = this.game.engine.getRenderHeight()
 
@@ -358,10 +360,11 @@ export class GameScreen implements Screen {
     const screenshotCallback = () => {
       if (once) return
       once = true
-
+      
       Tools.CreateScreenshotUsingRenderTarget(this.game.engine, this.camera, {
         precision: 1
       }, data => {
+        this.scene.particlesEnabled = true
   
         const box = MeshBuilder.CreateBox('screenshot', {
           width: 10,

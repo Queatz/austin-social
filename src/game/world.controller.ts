@@ -1,4 +1,4 @@
-import { InstancedMesh, Material, Mesh, MeshBuilder, ParticleHelper, PBRMaterial, Quaternion, Scalar, Scene, SceneLoader, ShadowGenerator, StandardMaterial, Texture, Vector3, VertexBuffer } from '@babylonjs/core'
+import { Constants, InstancedMesh, Material, Mesh, MeshBuilder, ParticleHelper, ParticleSystem, PBRMaterial, Quaternion, Scalar, Scene, SceneLoader, ShadowGenerator, StandardMaterial, Texture, Vector3, VertexBuffer } from '@babylonjs/core'
 import { PBRCustomMaterial } from '@babylonjs/materials'
 import { AirplaneController } from './airplane.controller'
 import { DebrisController } from './debris.controller'
@@ -116,8 +116,10 @@ export class WorldController {
       ParticleHelper.CreateAsync('rain', scene, false).then(set => {
         set.start()
 
-        set.systems[0].onBeforeDrawParticlesObservable.add(() => {
-          (set.systems[0].emitter as Vector3).copyFrom(scene.activeCamera!.globalPosition.add(new Vector3(0, 30, 0)))
+        set.systems.forEach(system => {
+          system.onBeforeDrawParticlesObservable.add(() => {
+            (system.emitter as Vector3).copyFrom(scene.activeCamera!.globalPosition.add(new Vector3(0, 30, 0)))
+          })
         })
       })
 
