@@ -151,7 +151,7 @@ export class PlantsController {
     const normals = ground.getVerticesData(VertexBuffer.NormalKind)!
     const colors = ground.getVerticesData(VertexBuffer.ColorKind)!
     const indices = ground.getIndices()!
-    const points = this.createSurfacePoints(positions, normals, colors, indices, colorFunc, density)
+    const points = this.createSurfacePoints(positions, normals, colors, indices, colorFunc, density, seed)
     
     if (materialCallback) { 
       scatterMesh.material = materialCallback(scatterMesh.material!)

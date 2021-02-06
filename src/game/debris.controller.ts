@@ -14,7 +14,7 @@ export class DebrisController {
         updatable: true
       })
 
-      SPS.addShape(scatterMesh, 22)
+      SPS.addShape(scatterMesh, 12)
       SPS.buildMesh()
 
       SPS.initParticles = () => {
@@ -64,9 +64,9 @@ export class DebrisController {
         return particle
       }
 
-      SPS.isAlwaysVisible = true
       SPS.initParticles()
       SPS.setParticles()
+      SPS.isAlwaysVisible = true
       SPS.computeParticleTexture = false
       SPS.computeParticleColor = false
 

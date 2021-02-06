@@ -287,6 +287,7 @@ export class CharacterCreatorScreen implements Screen {
     this.overlaySceneCamera.minZ = this.camera.minZ
     this.overlaySceneCamera.maxZ = this.camera.maxZ
     this.player.update()
+    this.world.update()
   }
 
   render(): void {

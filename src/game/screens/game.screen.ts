@@ -71,7 +71,7 @@ export class GameScreen implements Screen {
     this.camera.maxZ = 10000
     ;(this.camera.inputs.attached['mousewheel'] as FollowCameraMouseWheelInput).wheelPrecision = 1
     ;(this.camera.inputs.attached['pointers'] as FollowCameraPointersInput).angularSensibilityX = 2
-    ;(this.camera.inputs.attached['pointers'] as FollowCameraPointersInput).angularSensibilityY = 2
+    ;(this.camera.inputs.attached['pointers'] as FollowCameraPointersInput).angularSensibilityY = 8
 
     this.pipeline = new DefaultRenderingPipeline('defaultPipeline', true, this.scene, [ this.camera ])
     this.pipeline.samples = 4
@@ -278,6 +278,7 @@ export class GameScreen implements Screen {
     this.player.update()
     this.p.update()
     this.p2.update()
+    this.world.update()
 
     if (this.input.single('l')) {
       if (this.camera.maxCameraSpeed === 0) {

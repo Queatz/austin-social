@@ -478,12 +478,17 @@ export class PlayerController {
     let keydown = false, didSit = false, didPose = false
 
     if (this.input) {
+      if (this.input.pressed('z')) {  
+        this.hero.position.addInPlace(this.hero.forward.scaleInPlace(this.heroSpeed * dt))
+        keydown = true
+      }
+
       if (this.input.pressed('w')) {  
         this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * dt))
         keydown = true
       }
       if (this.input.pressed('e')) {  
-        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * 4 * dt))
+        this.hero.moveWithCollisions(this.hero.forward.scaleInPlace(this.heroSpeed * 2 * dt))
         keydown = true
       }
       if (this.input.pressed('s')) {

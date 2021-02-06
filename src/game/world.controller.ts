@@ -4,12 +4,14 @@ import { AirplaneController } from './airplane.controller'
 import { DebrisController } from './debris.controller'
 import { getMixMaterial } from './materials/mix.material'
 import { PlantsController } from './plants.controller'
+import { RainController } from './rain.controller'
 import { WaterController } from './water.controller'
 
 export class WorldController {
 
   ground?: Mesh
   plants = new PlantsController()
+  rain?: RainController
 
   constructor(scene: Scene, water: WaterController, shadowGenerator: ShadowGenerator, worldFileName: string) {
     SceneLoader.ImportMesh('', '/assets/', worldFileName, scene, result => {
@@ -113,16 +115,7 @@ export class WorldController {
       this.plants.addRocks(scene, this.ground, water, shadowGenerator)
       this.plants.addYellowTwigs(scene, this.ground, water, shadowGenerator)
 
-      ParticleHelper.CreateAsync('rain', scene, false).then(set => {
-        set.start()
-
-        set.systems.forEach(system => {
-          system.onBeforeDrawParticlesObservable.add(() => {
-            (system.emitter as Vector3).copyFrom(scene.activeCamera!.globalPosition.add(new Vector3(0, 30, 0)))
-          })
-        })
-      })
-
+      this.rain = new RainController(scene, water)
       new DebrisController(scene, this.ground!)
       new AirplaneController(scene)
 
@@ -198,5 +191,9 @@ export class WorldController {
         }
       })
     })
+  }
+
+  update() {
+    this.rain?.update()
   }
 }
