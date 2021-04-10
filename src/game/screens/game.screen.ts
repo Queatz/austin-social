@@ -351,8 +351,6 @@ export class GameScreen implements Screen {
 }
 
   screenshot() {
-    this.scene.particlesEnabled = false
-    
     const width = this.game.engine.getRenderWidth()
     const height = this.game.engine.getRenderHeight()
 
@@ -365,8 +363,6 @@ export class GameScreen implements Screen {
       Tools.CreateScreenshotUsingRenderTarget(this.game.engine, this.camera, {
         precision: 1
       }, data => {
-        this.scene.particlesEnabled = true
-  
         const box = MeshBuilder.CreateBox('screenshot', {
           width: 10,
           height: 10 * (height / width) 
