@@ -40,7 +40,7 @@ export class OverlayController {
 
     if (vanish || position) {
       dynamicTexture.getContext().fillStyle = '#ffffff'
-      this.canvasRoundRect(dynamicTexture.getContext(), 0, 0, DTWidth, DTHeight, 32)
+      this.canvasRoundRect(dynamicTexture.getContext() as CanvasRenderingContext2D, 0, 0, DTWidth, DTHeight, 32)
     }
 
     dynamicTexture.drawText(text, null, null, font, (position || 0) > 1 ? '#B767D2' : vanish || position ? '#000000' : '#ffffff', null as any)
