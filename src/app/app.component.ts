@@ -42,8 +42,9 @@ export class AppComponent implements OnInit {
       if (this.sayInput.nativeElement.value) {
         this.say.next(this.sayInput.nativeElement.value)
         this.sayInput.nativeElement.value = ''
-        this.renderCanvas.nativeElement.focus()
       }
+      
+      this.renderCanvas.nativeElement.focus()
     }
   }
 

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng serve --port 3333",
     "build": "ng build",
     "test": "ng test",
     "lint": "ng lint",
@@ -42,7 +42,7 @@
     "@types/cannon": "^0.1.5",
     "@types/jasmine": "~3.6.0",
     "@types/node": "^12.11.1",
-    "@types/seedrandom": "^2.4.28",
+    "@types/seedrandom": "^3.0.0",
     "codelyzer": "^6.0.0",
     "jasmine-core": "~3.6.0",
     "jasmine-spec-reporter": "~5.0.0",

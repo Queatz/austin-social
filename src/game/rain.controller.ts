@@ -1,15 +1,6 @@
 import { AbstractMesh, DeepImmutableObject, FollowCamera, Mesh, MeshBuilder, Ray, Scene, SceneLoader, SolidParticleSystem, StandardMaterial, Texture, Material, Color3 } from '@babylonjs/core'
 import { WaterController } from './water.controller'
 
-// ParticleHelper.CreateAsync('rain', scene, false).then(set => {
-//   set.start()
-
-//   set.systems.forEach(system => {
-//     system.onBeforeDrawParticlesObservable.add(() => {
-//       (system.emitter as Vector3).copyFrom(scene.activeCamera!.globalPosition.add(new Vector3(0, 30, 0)))
-//     })
-//   })
-// })
 export class RainController {
 
   SPS!: SolidParticleSystem
